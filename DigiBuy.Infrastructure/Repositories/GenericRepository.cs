@@ -20,7 +20,7 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEnt
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task<TEntity?> GetById(int id, params string[] includes)
+    public async Task<TEntity?> GetById(Guid id, params string[] includes)
     {
         var query = dbContext.Set<TEntity>().AsQueryable();
         query = includes.Aggregate(query, (current, inc) => current.Include(inc));
@@ -43,7 +43,12 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEnt
         dbContext.Set<TEntity>().Remove(entity);
     }
 
-    public async Task Delete(int id)
+    public Task Delete(int Id)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task Delete(Guid id)
     {
         var entity = await dbContext.Set<TEntity>().FirstOrDefaultAsync(x => x.Id == id);
         if (entity is not null)

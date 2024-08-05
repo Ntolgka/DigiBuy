@@ -10,8 +10,8 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
     {
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Name).IsRequired().HasMaxLength(100);
-        builder.Property(c => c.Url).IsRequired().HasMaxLength(100);
-        builder.Property(c => c.Tags).HasMaxLength(200);
+        builder.Property(c => c.Url).HasMaxLength(200);
+        builder.Property(c => c.Tags).HasMaxLength(100);
 
         builder.HasMany(c => c.ProductCategories)
             .WithOne(pc => pc.Category)
