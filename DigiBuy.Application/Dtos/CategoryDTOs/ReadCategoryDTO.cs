@@ -1,6 +1,6 @@
-﻿namespace DigiBuy.Application.Dtos.CategoryDtos;
+﻿namespace DigiBuy.Application.Dtos.CategoryDTOs;
 
-public class CategoryDTO
+public class ReadCategoryDTO
 {
     public int Id { get; set; }
     public string Name { get; set; }

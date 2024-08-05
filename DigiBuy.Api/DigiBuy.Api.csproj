@@ -23,6 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\DigiBuy.Application\DigiBuy.Application.csproj" />
       <ProjectReference Include="..\DigiBuy.Infrastructure\DigiBuy.Infrastructure.csproj" />
     </ItemGroup>
 

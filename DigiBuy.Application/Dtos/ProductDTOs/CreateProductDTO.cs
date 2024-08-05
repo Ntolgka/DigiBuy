@@ -1,8 +1,7 @@
-﻿namespace DigiBuy.Application.Dtos.ProductDtos;
+﻿namespace DigiBuy.Application.Dtos.ProductDTOs;
 
-public class ProductDTO
+public class CreateProductDTO
 {
-    public int Id { get; set; }
     public string Name { get; set; }
     public string Description { get; set; }
     public bool IsActive { get; set; }

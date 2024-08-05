@@ -1,3 +1,4 @@
+using DigiBuy.Application.Mappings;
 using DigiBuy.Domain.Entities;
 using DigiBuy.Domain.Repositories;
 using DigiBuy.Infrastructure.Data;
@@ -18,13 +19,14 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresSqlConnection")));
 
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(AutoMapperProfile).Assembly);
+
 // Generic Repository
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
 // Unit Of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-
 
 // Identity
 builder.Services.AddIdentity<User, IdentityRole>(options =>
@@ -41,9 +43,6 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
     })
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
-
-
-
 
 var app = builder.Build();
 
