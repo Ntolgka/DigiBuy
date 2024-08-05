@@ -15,6 +15,7 @@ public class AppDbContext : IdentityDbContext<User>
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderDetail> OrderDetails { get; set; }
     public DbSet<Coupon> Coupons { get; set; }
+    public override DbSet<User> Users { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

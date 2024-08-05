@@ -4,7 +4,7 @@ namespace DigiBuy.Application.Dtos.OrderDTOs;
 
 public class ReadOrderDTO
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public string UserId { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal CouponAmount { get; set; }

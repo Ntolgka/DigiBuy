@@ -13,10 +13,11 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.CouponAmount).IsRequired().HasColumnType("decimal(18,2)");
         builder.Property(o => o.CouponCode).HasMaxLength(50);
         builder.Property(o => o.PointsUsed).IsRequired().HasColumnType("decimal(18,2)");
-
+        
         builder.HasOne(o => o.User)
-            .WithMany()
-            .HasForeignKey(o => o.UserId);
+            .WithMany(u => u.Orders)
+            .HasForeignKey(o => o.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(o => o.OrderDetails)
             .WithOne(od => od.Order)
