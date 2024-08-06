@@ -20,6 +20,7 @@ public class CategoryService : ICategoryService
     public async Task<CreateCategoryDTO> CreateCategoryAsync(CreateCategoryDTO categoryDto)
     {
         var category = mapper.Map<Category>(categoryDto);
+        category.InsertDate = DateTime.UtcNow;
         await unitOfWork.GetRepository<Category>().AddAsync(category);
         await unitOfWork.CompleteAsync();
         return categoryDto;
@@ -37,15 +38,29 @@ public class CategoryService : ICategoryService
         return mapper.Map<IEnumerable<ReadCategoryDTO>>(categories);
     }
 
-    public async Task UpdateCategoryAsync(UpdateCategoryDTO categoryDto)
+    public async Task UpdateCategoryAsync(Guid id, UpdateCategoryDTO categoryDto)
     {
-        var category = mapper.Map<Category>(categoryDto);
+        var category = await unitOfWork.GetRepository<Category>().GetById(id);
+        if (category == null)
+        {
+            throw new KeyNotFoundException("Category not found");
+        }
+
+        mapper.Map(categoryDto, category);
+        category.UpdateDate = DateTime.UtcNow;
         unitOfWork.GetRepository<Category>().Update(category);
         await unitOfWork.CompleteAsync();
     }
 
     public async Task DeleteCategoryAsync(Guid id)
     {
+        var productsInCategory = await unitOfWork.GetRepository<ProductCategory>()
+            .QueryAsync(pc => pc.CategoryId == id);
+        if (productsInCategory.Any())
+        {
+            throw new InvalidOperationException("Cannot delete category with associated products");
+        }
+
         await unitOfWork.GetRepository<Category>().DeleteAsync(id);
         await unitOfWork.CompleteAsync();
     }

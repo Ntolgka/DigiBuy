@@ -15,55 +15,47 @@ public class AutoMapperProfile : Profile
     public AutoMapperProfile()
         {
             // Category
-            CreateMap<Category, ReadCategoryDTO>()
-                .ReverseMap(); 
-
-            CreateMap<CreateCategoryDTO, Category>()
-                .ReverseMap(); 
+            CreateMap<Category, ReadCategoryDTO>().ReverseMap();
+            
+            CreateMap<CreateCategoryDTO, Category>().ReverseMap();
+            
+            CreateMap<UpdateCategoryDTO, Category>()
+                .ForMember(dest => dest.UpdateDate, opt => opt.Ignore())
+                .ReverseMap();
 
             // Coupon
-            CreateMap<Coupon, ReadCouponDTO>()
-                .ReverseMap();
+            CreateMap<Coupon, ReadCouponDTO>().ReverseMap();
 
-            CreateMap<CreateCouponDTO, Coupon>()
-                .ReverseMap();
+            CreateMap<CreateCouponDTO, Coupon>().ReverseMap();
 
             // Order
             CreateMap<Order, ReadOrderDTO>()
                 .ForMember(dest => dest.OrderDetails, opt => opt.MapFrom(src => src.OrderDetails))
                 .ReverseMap(); 
 
-            CreateMap<CreateOrderDTO, Order>()
-                .ReverseMap();
+            CreateMap<CreateOrderDTO, Order>().ReverseMap();
 
             // OrderDetail
-            CreateMap<OrderDetail, ReadOrderDetailDTO>()
-                .ReverseMap();
+            CreateMap<OrderDetail, ReadOrderDetailDTO>().ReverseMap();
 
-            CreateMap<CreateOrderDetailDTO, OrderDetail>()
-                .ReverseMap();
+            CreateMap<CreateOrderDetailDTO, OrderDetail>().ReverseMap();
 
             // Product
-            CreateMap<Product, ReadProductDTO>()
-                .ReverseMap();
+            CreateMap<Product, ReadProductDTO>().ReverseMap();
 
-            CreateMap<CreateProductDTO, Product>()
-                .ReverseMap();
+            CreateMap<CreateProductDTO, Product>().ReverseMap();
             
             CreateMap<UpdateProductDTO, Product>()
                 .ForMember(dest => dest.UpdateDate, opt => opt.Ignore())
                 .ReverseMap();
 
             // ProductCategory
-            CreateMap<ProductCategory, ReadProductCategoryDTO>()
-                .ReverseMap();
+            CreateMap<ProductCategory, ReadProductCategoryDTO>().ReverseMap();
 
-            CreateMap<CreateProductCategoryDTO, ProductCategory>()
-                .ReverseMap();
+            CreateMap<CreateProductCategoryDTO, ProductCategory>().ReverseMap();
 
             // User
-            CreateMap<User, ReadUserDTO>()
-                .ReverseMap();
+            CreateMap<User, ReadUserDTO>().ReverseMap();
 
             CreateMap<CreateUserDTO, User>()
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.UserName))
