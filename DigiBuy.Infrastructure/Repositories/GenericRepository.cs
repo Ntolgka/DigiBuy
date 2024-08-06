@@ -27,7 +27,7 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEnt
         return await query.FirstOrDefaultAsync(x => x.Id == id);
     }
 
-    public async Task<TEntity> Insert(TEntity entity)
+    public async Task<TEntity> AddAsync(TEntity entity)
     {
         await dbContext.Set<TEntity>().AddAsync(entity);
         return entity;
@@ -43,33 +43,28 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEnt
         dbContext.Set<TEntity>().Remove(entity);
     }
 
-    public Task Delete(int Id)
-    {
-        throw new NotImplementedException();
-    }
-
-    public async Task Delete(Guid id)
+    public async Task DeleteAsync(Guid id)
     {
         var entity = await dbContext.Set<TEntity>().FirstOrDefaultAsync(x => x.Id == id);
         if (entity is not null)
             dbContext.Set<TEntity>().Remove(entity);
     }
 
-    public async Task<List<TEntity>> Where(Expression<Func<TEntity, bool>> expression, params string[] includes)
+    public async Task<List<TEntity>> QueryAsync(Expression<Func<TEntity, bool>> expression, params string[] includes)
     {
         var query = dbContext.Set<TEntity>().Where(expression).AsQueryable();
         query = includes.Aggregate(query, (current, inc) => current.Include(inc));
         return await query.ToListAsync();
     }
 
-    public async Task<TEntity?> FirstOrDefault(Expression<Func<TEntity, bool>> expression, params string[] includes)
+    public async Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> expression, params string[] includes)
     {
         var query = dbContext.Set<TEntity>().AsQueryable();
         query = includes.Aggregate(query, (current, inc) => current.Include(inc));
         return await query.FirstOrDefaultAsync(expression);
     }
 
-    public async Task<List<TEntity>> GetAll(params string[] includes)
+    public async Task<List<TEntity>> GetAllAsync(params string[] includes)
     {
         var query = dbContext.Set<TEntity>().AsQueryable();
         query = includes.Aggregate(query, (current, inc) => current.Include(inc));

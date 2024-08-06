@@ -1,4 +1,5 @@
 ﻿using DigiBuy.Domain.Entities;
+using DigiBuy.Domain.Enumerations;
 
 namespace DigiBuy.Application.Dtos.UserDTOs;
 
@@ -11,4 +12,5 @@ public class ReadUserDTO
     public decimal WalletBalance { get; set; }
     public decimal PointsBalance { get; set; }
     public UserStatus Status { get; set; }
+    public UserRole Role { get; set; }
 }

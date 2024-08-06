@@ -7,28 +7,15 @@ namespace DigiBuy.Infrastructure.Repositories;
 public class UnitOfWork : IUnitOfWork, IDisposable
 {
     private readonly AppDbContext dbContext;
-    public IGenericRepository<Category> CategoryRepository { get; }
-    public IGenericRepository<Product> ProductRepository { get; }
-    public IGenericRepository<Order> OrderRepository { get; }
-    public IGenericRepository<Coupon> CouponRepository { get; }
-    public IGenericRepository<OrderDetail> OrderDetailRepository { get; }
-    public IGenericRepository<ProductCategory> ProductCategoryRepository { get; }
     
     public UnitOfWork(AppDbContext dbContext)
     {
         this.dbContext = dbContext;
-        
-        CategoryRepository = new GenericRepository<Category>(this.dbContext);
-        ProductRepository = new GenericRepository<Product>(this.dbContext);
-        OrderRepository = new GenericRepository<Order>(this.dbContext);
-        CouponRepository = new GenericRepository<Coupon>(this.dbContext);
-        OrderDetailRepository = new GenericRepository<OrderDetail>(this.dbContext);
-        ProductCategoryRepository = new GenericRepository<ProductCategory>(this.dbContext);
     }
     
-    public void Dispose()
+    public IGenericRepository<TEntity> GetRepository<TEntity>() where TEntity : BaseEntity
     {
-        dbContext.Dispose();
+        return new GenericRepository<TEntity>(dbContext);
     }
     
     public async Task CompleteAsync()
@@ -52,6 +39,11 @@ public class UnitOfWork : IUnitOfWork, IDisposable
                 throw;
             }
         }
+    }
+    
+    public void Dispose()
+    {
+        dbContext.Dispose();
     }
     
 }
