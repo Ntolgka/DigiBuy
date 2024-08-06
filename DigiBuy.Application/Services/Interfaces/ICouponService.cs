@@ -7,6 +7,6 @@ public interface ICouponService
     Task<CreateCouponDTO> CreateCouponAsync(CreateCouponDTO couponDto);
     Task<ReadCouponDTO> GetCouponByIdAsync(Guid id);
     Task<IEnumerable<ReadCouponDTO>> GetAllCouponsAsync();
-    Task UpdateCouponAsync(UpdateCouponDTO couponDto);
+    Task UpdateCouponAsync(Guid id, UpdateCouponDTO couponDto); 
     Task DeleteCouponAsync(Guid id);
 }

@@ -25,8 +25,12 @@ public class AutoMapperProfile : Profile
 
             // Coupon
             CreateMap<Coupon, ReadCouponDTO>().ReverseMap();
-
+            
             CreateMap<CreateCouponDTO, Coupon>().ReverseMap();
+            
+            CreateMap<UpdateCouponDTO, Coupon>()
+                .ForMember(dest => dest.UpdateDate, opt => opt.Ignore())
+                .ReverseMap();
 
             // Order
             CreateMap<Order, ReadOrderDTO>()
