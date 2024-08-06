@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using DigiBuy.Application.Dtos.UserDTOs;
 using DigiBuy.Application.Services.Interfaces;
+using DigiBuy.Domain.Enumerations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,6 +28,21 @@ public class UserController : ControllerBase
 
         var result = await userService.RegisterAsync(userDto);
         return CreatedAtAction(nameof(GetUserById), new { id = result.Id }, result);
+    }
+    
+    [HttpPost("register-admin")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> RegisterAdminAsync(CreateUserDTO userDto)
+    {
+        try
+        {
+            var user = await userService.RegisterAdminAsync(userDto);
+            return Ok(user);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Internal server error: {ex.Message}");
+        }
     }
 
     [HttpPost("login")]
@@ -94,7 +110,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> DeleteUser(string id)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId != id && !User.IsInRole("Admin"))
+        if (userId != id && !User.IsInRole(UserRole.Admin.ToString()))
         {
             return Forbid(); // User does not have permission to delete this account
         }

@@ -49,6 +49,10 @@ public class AutoMapperProfile : Profile
 
             CreateMap<CreateProductDTO, Product>()
                 .ReverseMap();
+            
+            CreateMap<UpdateProductDTO, Product>()
+                .ForMember(dest => dest.UpdateDate, opt => opt.Ignore())
+                .ReverseMap();
 
             // ProductCategory
             CreateMap<ProductCategory, ReadProductCategoryDTO>()

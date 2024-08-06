@@ -1,5 +1,7 @@
 ﻿using DigiBuy.Domain.Entities;
+using DigiBuy.Domain.Enumerations;
 using DigiBuy.Infrastructure.Configurations;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +21,12 @@ public class AppDbContext : IdentityDbContext<User>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        
+        // Seed roles
+        modelBuilder.Entity<IdentityRole>().HasData(
+            new IdentityRole { Id = Guid.NewGuid().ToString(), Name = UserRole.Admin.ToString(), NormalizedName = UserRole.Admin.ToString().ToUpper() },
+            new IdentityRole { Id = Guid.NewGuid().ToString(), Name = UserRole.User.ToString(), NormalizedName = UserRole.User.ToString().ToUpper() }
+        );
 
         modelBuilder.ApplyConfiguration(new CategoryConfiguration());
         modelBuilder.ApplyConfiguration(new ProductConfiguration());

@@ -5,6 +5,7 @@ namespace DigiBuy.Application.Services.Interfaces;
 public interface IUserService
 {
     Task<ReadUserDTO> RegisterAsync(CreateUserDTO userDto);
+    Task<ReadUserDTO> RegisterAdminAsync(CreateUserDTO userDto);
     Task<string> LoginAsync(LoginUserDTO loginDto);
     Task LogoutAsync();
     Task ChangePasswordAsync(ChangePasswordDTO changePasswordDto);

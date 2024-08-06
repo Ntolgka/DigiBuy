@@ -15,16 +15,14 @@ public class UserService : IUserService
     private readonly IMapper mapper;
     private readonly JwtTokenService jwtTokenService;
     private readonly ILogger<UserService> logger;
-    private readonly RoleManager<IdentityRole> roleManager;
 
-    public UserService(UserManager<User> userManager, SignInManager<User> signInManager, IMapper mapper, JwtTokenService jwtTokenService, ILogger<UserService> logger, RoleManager<IdentityRole> roleManager)
+    public UserService(UserManager<User> userManager, SignInManager<User> signInManager, IMapper mapper, JwtTokenService jwtTokenService, ILogger<UserService> logger)
     {
         this.userManager = userManager;
-        this.signInManager = signInManager;
+        this.signInManager = signInManager; 
         this.mapper = mapper;
         this.jwtTokenService = jwtTokenService;
         this.logger = logger;
-        this.roleManager = roleManager;
     }
 
     public async Task<ReadUserDTO> RegisterAsync(CreateUserDTO userDto)
@@ -33,6 +31,7 @@ public class UserService : IUserService
         {
             var user = mapper.Map<User>(userDto);
             user.Status = UserStatus.Active;
+            user.Role = UserRole.User;
             var result = await userManager.CreateAsync(user, userDto.Password);
 
             if (!result.Succeeded)
@@ -42,19 +41,50 @@ public class UserService : IUserService
                 throw new Exception(errorMessages);
             }
 
-            // Create "User" role if it does not exist
-            if (!await roleManager.RoleExistsAsync(UserRole.User.ToString()))
-            {
-                await roleManager.CreateAsync(new IdentityRole(UserRole.User.ToString()));
-            }
-
-            await userManager.AddToRoleAsync(user, UserRole.User.ToString());
+            string userRole = UserRole.User.ToString();
+            await userManager.AddToRoleAsync(user, userRole);
 
             return mapper.Map<ReadUserDTO>(user);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Exception occurred during registration for user: {UserName}", userDto.UserName);
+            throw;
+        }
+    }
+    
+    public async Task<ReadUserDTO> RegisterAdminAsync(CreateUserDTO userDto)
+    {
+        try
+        {
+            var user = mapper.Map<User>(userDto);
+            user.Status = UserStatus.Active;
+            user.Role = UserRole.Admin;
+            
+            var result = await userManager.CreateAsync(user, userDto.Password);
+
+            if (!result.Succeeded)
+            {
+                var errorMessages = string.Join(", ", result.Errors.Select(e => e.Description));
+                logger.LogError("Failed to register admin with errors: {Errors}", errorMessages);
+                throw new Exception(errorMessages);
+            }
+
+            var adminRole = UserRole.Admin;
+            
+            var addRoleResult = await userManager.AddToRoleAsync(user, adminRole.ToString());
+            if (!addRoleResult.Succeeded)
+            {
+                var errorMessages = string.Join(", ", addRoleResult.Errors.Select(e => e.Description));
+                logger.LogError("Failed to add admin role to user with errors: {Errors}", errorMessages);
+                throw new Exception(errorMessages);
+            }
+
+            return mapper.Map<ReadUserDTO>(user);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Exception occurred during admin registration for user: {UserName}", userDto.UserName);
             throw;
         }
     }
