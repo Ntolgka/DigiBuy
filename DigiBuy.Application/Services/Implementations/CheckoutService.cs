@@ -1,6 +1,7 @@
-﻿using AutoMapper;
+﻿using System.Security.Claims;
+using AutoMapper;
 using DigiBuy.Application.Dtos.CheckoutDTOs;
-using DigiBuy.Application.Dtos.OrderDTOs;
+using DigiBuy.Application.Dtos.UserDTOs;
 using DigiBuy.Application.Services.Interfaces;
 using DigiBuy.Domain.Entities;
 using DigiBuy.Domain.Repositories;
@@ -13,75 +14,141 @@ public class CheckoutService : ICheckoutService
     private readonly IUnitOfWork unitOfWork;
     private readonly IMapper mapper;
     private readonly IUserService userService;
-    private readonly ICouponService couponService;
 
-    public CheckoutService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService, ICouponService couponService)
+    public CheckoutService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService)
     {
         this.unitOfWork = unitOfWork;
         this.mapper = mapper;
         this.userService = userService;
-        this.couponService = couponService;
     }
 
-    public async Task<CheckoutResultDTO> CheckoutAsync(CreateOrderDTO orderDto, string userId)
+    public async Task<CheckoutResultDTO> CheckoutAsync(string orderId, string couponCode, ClaimsPrincipal userClaims, bool usePoints)
     {
-        // Fetch user entity
+        var userId = userClaims.FindFirstValue(ClaimTypes.NameIdentifier); // Get user ID from claims
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new InvalidOperationException("User not authenticated.");
+        }
+
+        // Retrieve the existing order
+        var order = await GetOrderWithDetailsAsync(orderId, userId);
+
+        // Retrieve user information
+        var user = await GetUserAsync(userId);
+
+        // Validate the coupon
+        var coupon = await ValidateCouponAsync(couponCode);
+
+        // Calculate the total amount and apply coupon/points
+        var (totalAmount, discountAmount, pointsToUse) = CalculateOrderAmount(order, user, coupon, usePoints);
+
+        // Simulate payment
+        SimulateCardPayment(totalAmount);
+
+        // Finalize the order
+        await FinalizeOrderAsync(user, pointsToUse, order, coupon, totalAmount);
+
+        return new CheckoutResultDTO
+        {
+            TotalAmount = totalAmount,
+            DiscountAmount = discountAmount,
+            PointsUsed = pointsToUse
+        };
+    }
+
+    private async Task<Order> GetOrderWithDetailsAsync(string orderId, string userId)
+    {
+        // Eagerly load OrderDetails
+        var orders = await unitOfWork.GetRepository<Order>()
+            .QueryAsync(o => o.Id.ToString() == orderId && o.UserId == userId, nameof(Order.OrderDetails));
+            
+        var order = orders.FirstOrDefault();
+
+        if (order == null)
+        {
+            throw new InvalidOperationException("Order not found or does not belong to the user.");
+        }
+
+        return order;
+    }
+
+    private async Task<User> GetUserAsync(string userId)
+    {
         var userDto = await userService.GetUserByIdAsync(userId);
         if (userDto == null)
         {
             throw new InvalidOperationException("User not found.");
         }
-        
-        var user = mapper.Map<User>(userDto);
+        return mapper.Map<User>(userDto);
+    }
 
-        // Fetch and validate coupon
-        Coupon coupon = null;
-        if (!string.IsNullOrEmpty(orderDto.CouponCode))
+    private async Task<Coupon> ValidateCouponAsync(string couponCode)
+    {
+        if (string.IsNullOrEmpty(couponCode))
         {
-            coupon = await unitOfWork.GetRepository<Coupon>().FirstOrDefaultAsync(c => c.Code == orderDto.CouponCode);
-            if (coupon == null || coupon.IsUsed || coupon.ExpiryDate < DateTime.Now)
-            {
-                throw new InvalidOperationException("Invalid or expired coupon.");
-            }
+            return null;
         }
 
-        // Calculate total amount, discount, and points used
-        var totalAmount = orderDto.OrderDetails.Sum(od => od.Price * od.Quantity);
-        var discountAmount = coupon?.Amount ?? 0;
-        var pointsUsed = PointsHelper.CalculatePointsToUse(user, totalAmount - discountAmount);
+        var coupon = await unitOfWork.GetRepository<Coupon>().FirstOrDefaultAsync(c => c.Code == couponCode);
+        if (coupon == null || coupon.IsUsed || coupon.ExpiryDate < DateTime.UtcNow)
+        {
+            throw new InvalidOperationException("Invalid or expired coupon.");
+        }
 
-        // Create order entity
-        var order = mapper.Map<Order>(orderDto);
-        order.UserId = userId;
-        order.TotalAmount = totalAmount;
-        order.CouponAmount = discountAmount;
-        order.CouponCode = coupon?.Code;
-        order.PointsUsed = pointsUsed;
+        return coupon;
+    }
 
-        // Map and assign order details
-        order.OrderDetails = orderDto.OrderDetails.Select(od => mapper.Map<OrderDetail>(od)).ToList();
+    private (decimal totalAmount, decimal discountAmount, decimal pointsToUse) CalculateOrderAmount(Order order, User user, Coupon coupon, bool usePoints)
+    {
+        decimal totalAmount = order.OrderDetails.Sum(od => od.Price * od.Quantity);
+        decimal discountAmount = coupon?.Amount ?? 0;
+        totalAmount -= discountAmount;
 
-        // Update user's points and wallet balance
-        PointsHelper.DeductPoints(user, pointsUsed);
-        user.WalletBalance -= Math.Max(totalAmount - discountAmount - pointsUsed, 0);
+        decimal pointsToUse = 0;
+        if (usePoints)
+        {
+            pointsToUse = PointsHelper.CalculatePointsToUse(user, totalAmount);
+            if (pointsToUse > user.PointsBalance)
+            {
+                pointsToUse = user.PointsBalance;
+            }
+            totalAmount -= pointsToUse;
+        }
 
-        // Mark coupon as used if applicable
+        return (totalAmount, discountAmount, pointsToUse);
+    }
+
+    private void SimulateCardPayment(decimal totalAmount)
+    {
+        // Simulate a card payment
+        // In a real scenario, integrate with a payment gateway
+        Console.WriteLine($"Simulated card payment of ${totalAmount}");
+    }
+
+    private async Task FinalizeOrderAsync(User user, decimal pointsToUse, Order order, Coupon coupon, decimal totalAmount)
+    {
+        PointsHelper.DeductPoints(user, pointsToUse);
+        user.WalletBalance -= Math.Max(totalAmount, 0);
+
         if (coupon != null)
         {
-            await couponService.UseCouponAsync(coupon.Code, discountAmount);
+            coupon.IsUsed = true;
+            unitOfWork.GetRepository<Coupon>().Update(coupon);
         }
 
-        // Add order to the database
-        await unitOfWork.GetRepository<Order>().AddAsync(order);
-        await unitOfWork.CompleteAsync();
+        var updatedUserDto = mapper.Map<UpdateUserDTO>(user);
 
-        // Return the result DTO
-        return new CheckoutResultDTO
-        {
-            TotalAmount = totalAmount,
-            DiscountAmount = discountAmount,
-            PointsUsed = pointsUsed
-        };
+        order.TotalAmount = totalAmount;
+        order.CouponAmount = coupon?.Amount ?? 0;
+        order.PointsUsed = pointsToUse;
+        order.UpdateDate = DateTime.UtcNow;
+
+        unitOfWork.GetRepository<Order>().Update(order);
+        await userService.UpdateUserAsync(updatedUserDto);
+        await unitOfWork.CompleteAsync();
     }
 }
+
+
 

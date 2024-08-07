@@ -4,10 +4,10 @@ namespace DigiBuy.Application.Services.Interfaces;
 
 public interface IOrderService
 {
-    Task<CreateOrderDTO> CreateOrderAsync(CreateOrderDTO orderDto);
+    Task<CreateOrderDTO> CreateOrderAsync(CreateOrderDTO orderDto, string userId);
     Task<ReadOrderDTO> GetOrderByIdAsync(Guid id);
     Task<IEnumerable<ReadOrderDTO>> GetAllOrdersAsync();
     Task<IEnumerable<ReadOrderDTO>> GetOrdersByUserIdAsync(string userId);
-    Task UpdateOrderAsync(UpdateOrderDTO orderDto);
-    Task DeleteOrderAsync(Guid id);
+    Task UpdateOrderAsync(Guid id, UpdateOrderDTO orderDto);
+    Task DeleteOrderAsync(Guid id); 
 }

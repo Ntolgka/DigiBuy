@@ -81,7 +81,7 @@ namespace DigiBuy.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Code = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Code = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
                     Amount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     ExpiryDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsUsed = table.Column<bool>(type: "boolean", nullable: false),
@@ -307,8 +307,8 @@ namespace DigiBuy.Infrastructure.Migrations
                 columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
                 values: new object[,]
                 {
-                    { "6b36a9e0-ef68-495b-b963-6d4c34db8098", null, "Admin", "ADMIN" },
-                    { "f144139e-57cb-4774-8c33-575dc22f5635", null, "User", "USER" }
+                    { "20d79fda-70e7-443d-9986-7377c7f82a16", null, "User", "USER" },
+                    { "315ea3f3-b032-471f-97ff-d5c0d681eabe", null, "Admin", "ADMIN" }
                 });
 
             migrationBuilder.CreateIndex(

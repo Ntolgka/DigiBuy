@@ -1,5 +1,7 @@
-﻿using DigiBuy.Application.Dtos.OrderDTOs;
+﻿using System.Security.Claims;
+using DigiBuy.Application.Dtos.CheckoutDTOs;
 using DigiBuy.Application.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DigiBuy.Api.Controllers;
@@ -8,20 +10,20 @@ namespace DigiBuy.Api.Controllers;
 [Route("api/[controller]")]
 public class CheckoutController : ControllerBase
 {
-    private readonly ICheckoutService _checkoutService;
+    private readonly ICheckoutService checkoutService;
 
     public CheckoutController(ICheckoutService checkoutService)
     {
-        _checkoutService = checkoutService;
+        this.checkoutService = checkoutService;
     }
 
-    [HttpPost]
-    [Route("process")]
-    public async Task<IActionResult> ProcessCheckout([FromBody] CreateOrderDTO orderDto, [FromQuery] string userId)
+    [HttpPost("process")]
+    [Authorize(Roles = "User")]
+    public async Task<IActionResult> ProcessCheckout([FromQuery] string orderId, [FromQuery] string couponCode, [FromQuery] bool usePoints)
     {
         try
         {
-            var result = await _checkoutService.CheckoutAsync(orderDto, userId);
+            var result = await checkoutService.CheckoutAsync(orderId, couponCode, User, usePoints);
             return Ok(result);
         }
         catch (InvalidOperationException ex)
@@ -34,3 +36,4 @@ public class CheckoutController : ControllerBase
         }
     }
 }
+

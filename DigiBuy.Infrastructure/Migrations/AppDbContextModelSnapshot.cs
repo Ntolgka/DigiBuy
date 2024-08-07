@@ -68,8 +68,8 @@ namespace DigiBuy.Infrastructure.Migrations
 
                     b.Property<string>("Code")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("timestamp with time zone");
@@ -352,13 +352,13 @@ namespace DigiBuy.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "6b36a9e0-ef68-495b-b963-6d4c34db8098",
+                            Id = "315ea3f3-b032-471f-97ff-d5c0d681eabe",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "f144139e-57cb-4774-8c33-575dc22f5635",
+                            Id = "20d79fda-70e7-443d-9986-7377c7f82a16",
                             Name = "User",
                             NormalizedName = "USER"
                         });

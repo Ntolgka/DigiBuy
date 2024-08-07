@@ -17,42 +17,95 @@ public class OrderService : IOrderService
         this.mapper = mapper;
     }
 
-    public async Task<CreateOrderDTO> CreateOrderAsync(CreateOrderDTO orderDto)
+    public async Task<CreateOrderDTO> CreateOrderAsync(CreateOrderDTO orderDto, string userId)
     {
         var order = mapper.Map<Order>(orderDto);
+        order.UserId = userId;
+        
+        if (order.OrderDetails == null)
+        {
+            order.OrderDetails = new List<OrderDetail>();
+        }
+
+        foreach (var item in orderDto.OrderDetails)
+        {
+            var product = await unitOfWork.GetRepository<Product>()
+                .FirstOrDefaultAsync(p => p.Id == item.ProductId);
+
+            if (product == null)
+            {
+                throw new KeyNotFoundException($"Product with ID {item.ProductId} not found.");
+            }
+
+            var productPrice = product.Price;
+            order.TotalAmount += productPrice * item.Quantity;
+
+            var orderDetail = new OrderDetail
+            {
+                Id = Guid.NewGuid(),
+                OrderId = order.Id,
+                ProductId = item.ProductId,
+                Quantity = item.Quantity,
+                Price = productPrice, 
+                InsertDate = DateTime.UtcNow,
+                UpdateDate = DateTime.UtcNow,
+                IsActive = true
+            };
+            order.OrderDetails.Add(orderDetail);
+        }
+
         await unitOfWork.GetRepository<Order>().AddAsync(order);
         await unitOfWork.CompleteAsync();
+
         return orderDto;
     }
 
     public async Task<ReadOrderDTO> GetOrderByIdAsync(Guid id)
     {
-        var order = await unitOfWork.GetRepository<Order>().GetByIdAsync(id);
-        return mapper.Map<ReadOrderDTO>(order);
-    }
+        var order = await unitOfWork.GetRepository<Order>().GetByIdAsync(id, nameof(Order.OrderDetails));
+        if (order == null)
+        {
+            throw new KeyNotFoundException("Order not found.");
+        }
 
-    public async Task<IEnumerable<ReadOrderDTO>> GetAllOrdersAsync()
-    {
-        var orders = await unitOfWork.GetRepository<Order>().GetAllAsync();
-        return mapper.Map<IEnumerable<ReadOrderDTO>>(orders);
+        return mapper.Map<ReadOrderDTO>(order);
     }
     
     public async Task<IEnumerable<ReadOrderDTO>> GetOrdersByUserIdAsync(string userId)
     {
-        var orders = await unitOfWork.GetRepository<Order>().QueryAsync(o => o.UserId == userId);
+        var orders = await unitOfWork.GetRepository<Order>()
+            .QueryAsync(o => o.UserId == userId, nameof(Order.OrderDetails));
         return mapper.Map<IEnumerable<ReadOrderDTO>>(orders);
     }
 
-    public async Task UpdateOrderAsync(UpdateOrderDTO orderDto)
+    public async Task<IEnumerable<ReadOrderDTO>> GetAllOrdersAsync()
     {
-        var order = mapper.Map<Order>(orderDto);
+        var orders = await unitOfWork.GetRepository<Order>().GetAllAsync(nameof(Order.OrderDetails));
+        return mapper.Map<IEnumerable<ReadOrderDTO>>(orders);
+    }
+
+    public async Task UpdateOrderAsync(Guid id, UpdateOrderDTO orderDto)
+    {
+        var order = await unitOfWork.GetRepository<Order>().GetByIdAsync(id);
+        if (order == null)
+        {
+            throw new KeyNotFoundException("Order not found.");
+        }
+
+        mapper.Map(orderDto, order);
         unitOfWork.GetRepository<Order>().Update(order);
         await unitOfWork.CompleteAsync();
     }
 
     public async Task DeleteOrderAsync(Guid id)
     {
-        await unitOfWork.GetRepository<Order>().DeleteAsync(id);
+        var order = await unitOfWork.GetRepository<Order>().GetByIdAsync(id);
+        if (order == null)
+        {
+            throw new KeyNotFoundException("Order not found.");
+        }
+
+        unitOfWork.GetRepository<Order>().Delete(order);
         await unitOfWork.CompleteAsync();
     }
 }
