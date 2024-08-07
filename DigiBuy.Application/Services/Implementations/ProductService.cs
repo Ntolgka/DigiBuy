@@ -28,7 +28,7 @@ public class ProductService : IProductService
 
     public async Task<ReadProductDTO> GetProductByIdAsync(Guid id)
     {
-        var product = await unitOfWork.GetRepository<Product>().GetById(id, nameof(Product.ProductCategories), nameof(Product.ProductCategories) + "." + nameof(ProductCategory.Category));
+        var product = await unitOfWork.GetRepository<Product>().GetByIdAsync(id, nameof(Product.ProductCategories), nameof(Product.ProductCategories) + "." + nameof(ProductCategory.Category));
         return mapper.Map<ReadProductDTO>(product);
     }
 
@@ -47,7 +47,7 @@ public class ProductService : IProductService
 
     public async Task UpdateProductAsync(Guid id, UpdateProductDTO productDto)
     {
-        var product = await unitOfWork.GetRepository<Product>().GetById(id);
+        var product = await unitOfWork.GetRepository<Product>().GetByIdAsync(id);
         if (product == null)
         {
             throw new KeyNotFoundException("Product not found");
@@ -67,13 +67,13 @@ public class ProductService : IProductService
 
     public async Task AddCategoryToProductAsync(Guid productId, Guid categoryId)
     {
-        var product = await unitOfWork.GetRepository<Product>().GetById(productId);
+        var product = await unitOfWork.GetRepository<Product>().GetByIdAsync(productId);
         if (product == null)
         {
             throw new KeyNotFoundException("Product not found");
         }
 
-        var category = await unitOfWork.GetRepository<Category>().GetById(categoryId);
+        var category = await unitOfWork.GetRepository<Category>().GetByIdAsync(categoryId);
         if (category == null)
         {
             throw new KeyNotFoundException("Category not found");

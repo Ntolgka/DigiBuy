@@ -6,7 +6,7 @@ namespace DigiBuy.Domain.Repositories;
 public interface IGenericRepository<TEntity> where TEntity : BaseEntity
 {
     Task SaveAsync();
-    Task<TEntity?> GetById(Guid Id,params string[] includes);    
+    Task<TEntity?> GetByIdAsync(Guid Id,params string[] includes);      
     Task<TEntity> AddAsync(TEntity entity);
     void Update(TEntity entity);
     void Delete(TEntity entity);

@@ -37,15 +37,30 @@ public class CouponController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [AllowAnonymous]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetCouponById(Guid id)
     {
         var coupon = await couponService.GetCouponByIdAsync(id);
         return coupon != null ? Ok(coupon) : NotFound("Coupon not found.");
     }
+    
+    [HttpGet("code/{code}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetCouponByCode(string code)
+    {
+        try
+        {
+            var coupon = await couponService.GetCouponByCodeAsync(code);
+            return coupon != null ? Ok(coupon) : NotFound("Coupon not found.");
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 
     [HttpGet]
-    [AllowAnonymous]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAllCoupons()
     {
         var coupons = await couponService.GetAllCouponsAsync();
@@ -84,6 +99,20 @@ public class CouponController : ControllerBase
         catch (KeyNotFoundException)
         {
             return NotFound("Coupon not found.");
+        }
+    }
+    
+    [HttpPost("use")]
+    public async Task<IActionResult> UseCoupon([FromQuery] string code, [FromQuery] decimal amountToUse)
+    {
+        try
+        {
+            await couponService.UseCouponAsync(code, amountToUse);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
     }
 }

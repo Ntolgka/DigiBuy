@@ -28,7 +28,7 @@ public class CategoryService : ICategoryService
 
     public async Task<ReadCategoryDTO> GetCategoryByIdAsync(Guid id)
     {
-        var category = await unitOfWork.GetRepository<Category>().GetById(id);
+        var category = await unitOfWork.GetRepository<Category>().GetByIdAsync(id);
         return mapper.Map<ReadCategoryDTO>(category);
     }
 
@@ -40,7 +40,7 @@ public class CategoryService : ICategoryService
 
     public async Task UpdateCategoryAsync(Guid id, UpdateCategoryDTO categoryDto)
     {
-        var category = await unitOfWork.GetRepository<Category>().GetById(id);
+        var category = await unitOfWork.GetRepository<Category>().GetByIdAsync(id);
         if (category == null)
         {
             throw new KeyNotFoundException("Category not found");

@@ -20,7 +20,7 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEnt
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task<TEntity?> GetById(Guid id, params string[] includes)
+    public async Task<TEntity?> GetByIdAsync(Guid id, params string[] includes) 
     {
         var query = dbContext.Set<TEntity>().AsQueryable();
         query = includes.Aggregate(query, (current, inc) => current.Include(inc));

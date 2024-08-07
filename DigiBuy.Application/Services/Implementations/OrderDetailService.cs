@@ -21,7 +21,7 @@ public class OrderDetailService(IUnitOfWork unitOfWork, IMapper mapper) : IOrder
 
         public async Task<ReadOrderDetailDTO> GetOrderDetailByIdAsync(Guid id)
         {
-            var orderDetail = await unitOfWork.GetRepository<OrderDetail>().GetById(id);
+            var orderDetail = await unitOfWork.GetRepository<OrderDetail>().GetByIdAsync(id);
             return mapper.Map<ReadOrderDetailDTO>(orderDetail);
         }
 

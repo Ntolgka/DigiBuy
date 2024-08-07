@@ -25,7 +25,7 @@ public class CouponService : ICouponService
         {
             throw new Exception("Coupon code already exists.");
         }
-        
+
         if (couponDto.Code.Length > 10)
         {
             throw new Exception("Coupon code must be less than 10 characters.");
@@ -41,8 +41,38 @@ public class CouponService : ICouponService
 
     public async Task<ReadCouponDTO> GetCouponByIdAsync(Guid id)
     {
-        var coupon = await unitOfWork.GetRepository<Coupon>().GetById(id);
+        var coupon = await unitOfWork.GetRepository<Coupon>().GetByIdAsync(id);
         return mapper.Map<ReadCouponDTO>(coupon);
+    }
+    
+    public async Task<ReadCouponDTO> GetCouponByCodeAsync(string code)
+    {
+        var coupon = await unitOfWork.GetRepository<Coupon>().FirstOrDefaultAsync(c => c.Code == code);
+        return mapper.Map<ReadCouponDTO>(coupon);
+    }
+
+    public async Task UseCouponAsync(string code, decimal amountToUse)
+    {
+        var coupon = await unitOfWork.GetRepository<Coupon>().FirstOrDefaultAsync(c => c.Code == code);
+        if (coupon == null || coupon.IsUsed || coupon.ExpiryDate < DateTime.Now)
+        {
+            throw new Exception("Invalid or expired coupon.");
+        }
+
+        if (coupon.Amount < amountToUse)
+        {
+            throw new Exception("Coupon amount is insufficient.");
+        }
+
+        coupon.Amount -= amountToUse;
+
+        if (coupon.Amount <= 0)
+        {
+            coupon.IsUsed = true;
+        }
+
+        unitOfWork.GetRepository<Coupon>().Update(coupon);
+        await unitOfWork.CompleteAsync();
     }
 
     public async Task<IEnumerable<ReadCouponDTO>> GetAllCouponsAsync()
@@ -53,7 +83,7 @@ public class CouponService : ICouponService
 
     public async Task UpdateCouponAsync(Guid id, UpdateCouponDTO couponDto)
     {
-        var coupon = await unitOfWork.GetRepository<Coupon>().GetById(id);
+        var coupon = await unitOfWork.GetRepository<Coupon>().GetByIdAsync(id);
         if (coupon == null)
         {
             throw new KeyNotFoundException("Coupon not found");
@@ -65,12 +95,16 @@ public class CouponService : ICouponService
         await unitOfWork.CompleteAsync();
     }
 
-    // Soft Delete
     public async Task DeleteCouponAsync(Guid id)
     {
-        var coupon = await unitOfWork.GetRepository<Coupon>().GetById(id);
+        var coupon = await unitOfWork.GetRepository<Coupon>().GetByIdAsync(id);
+        if (coupon == null)
+        {
+            throw new KeyNotFoundException("Coupon not found");
+        }
+
         coupon.IsUsed = true;
-        
+        unitOfWork.GetRepository<Coupon>().Update(coupon);
         await unitOfWork.CompleteAsync();
     }
 }
