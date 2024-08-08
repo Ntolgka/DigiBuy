@@ -1,6 +1,4 @@
-﻿using System.Security.Claims;
-using DigiBuy.Application.Dtos.CheckoutDTOs;
-using DigiBuy.Application.Services.Interfaces;
+﻿using DigiBuy.Application.Services.Interfaces;
 using DigiBuy.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

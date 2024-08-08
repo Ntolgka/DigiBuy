@@ -14,12 +14,14 @@ public class CheckoutService : ICheckoutService
     private readonly IUnitOfWork unitOfWork;
     private readonly IMapper mapper;
     private readonly IUserService userService;
+    private readonly IEmailService emailService;
 
-    public CheckoutService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService)
+    public CheckoutService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService, IEmailService emailService)
     {
         this.unitOfWork = unitOfWork;
         this.mapper = mapper;
         this.userService = userService;
+        this.emailService = emailService;
     }
     
     // TODO - Make this to add points to user regarding to RewardPercentage and make payment then soft delete the order and delete orderdetail(?)
@@ -50,7 +52,7 @@ public class CheckoutService : ICheckoutService
             throw new InvalidOperationException("Invalid card details provided.");
         }
         
-        SimulateCardPayment(totalAmount);
+        await SimulateCardPayment(totalAmount, user.Email);
 
         // Finalize the order
         await FinalizeOrderAsync(user, pointsToUse, order, coupon, totalAmount);
@@ -125,10 +127,13 @@ public class CheckoutService : ICheckoutService
         return (totalAmount, discountAmount, pointsToUse);
     }
 
-    private void SimulateCardPayment(decimal totalAmount)
+    private async Task SimulateCardPayment(decimal totalAmount, string userEmail)
     {
-        // Send email that the payment was successfull
-        Console.WriteLine($"Simulated card payment of ${totalAmount}");
+        // Send a confirmation email
+        var subject = "Payment Confirmation";
+        var message = $"Dear customer, your payment of ${totalAmount} has been successfully processed.";
+    
+        await emailService.SendEmailAsync(userEmail, subject, message);
     }
 
     private async Task FinalizeOrderAsync(User user, decimal pointsToUse, Order order, Coupon coupon, decimal totalAmount)
