@@ -6,6 +6,8 @@ using DigiBuy.Application.Messaging;
 using DigiBuy.Application.Services.Implementations;
 using DigiBuy.Application.Services.Interfaces;
 using DigiBuy.Application.Token;
+using DigiBuy.Application.Validators.Create;
+using DigiBuy.Application.Validators.Update;
 using DigiBuy.Domain.Entities;
 using DigiBuy.Domain.Enumerations;
 using DigiBuy.Domain.Repositories;
@@ -19,6 +21,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -140,6 +144,13 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("UserOnly", policy =>
         policy.RequireRole(UserRole.User.ToString()));
 });
+
+// FluentValidation
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddFluentValidationClientsideAdapters();
+
+builder.Services.AddValidatorsFromAssemblyContaining<CreateCategoryDTOValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateCategoryDTOValidator>();
 
 // Services
 builder.Services.AddScoped<IUserService, UserService>();
