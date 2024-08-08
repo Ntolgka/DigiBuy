@@ -133,7 +133,7 @@ public class CheckoutService : ICheckoutService
         var subject = "Payment Confirmation";
         var message = $"Dear customer, your payment of ${totalAmount} has been successfully processed.";
     
-        await emailService.SendEmailAsync(userEmail, subject, message);
+        emailService.EnqueueEmail(userEmail, subject, message);
     }
 
     private async Task FinalizeOrderAsync(User user, decimal pointsToUse, Order order, Coupon coupon, decimal totalAmount)

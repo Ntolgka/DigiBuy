@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using DigiBuy.Api.Middlewares;
 using DigiBuy.Application.Mappings;
+using DigiBuy.Application.Messaging;
 using DigiBuy.Application.Services.Implementations;
 using DigiBuy.Application.Services.Interfaces;
 using DigiBuy.Application.Token;
@@ -10,6 +11,8 @@ using DigiBuy.Domain.Enumerations;
 using DigiBuy.Domain.Repositories;
 using DigiBuy.Infrastructure.Data;
 using DigiBuy.Infrastructure.Repositories;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -91,6 +94,15 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresSqlConnection")));
 
+// Hangfire Connection
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(builder.Configuration.GetConnectionString("HangfireConnection")));
+
+builder.Services.AddHangfireServer();
+
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile).Assembly);
 
@@ -138,7 +150,8 @@ builder.Services.AddScoped<ICouponService, CouponService>();
 builder.Services.AddScoped<IOrderDetailService, OrderDetailService>();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddSingleton<IEmailService, EmailService>();
+builder.Services.AddSingleton<RabbitMqProducer>();
 
 var app = builder.Build();
 
@@ -151,12 +164,24 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<RequestResponseLoggingMiddleware>();
 app.UseMiddleware<ErrorHandlerMiddleware>(); 
 
+// Hangfire Dashboard
+app.UseHangfireDashboard();
+
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+    RecurringJob.AddOrUpdate(
+        "process-email-jobs",
+        () => emailService.ProcessEmailJobs(),
+        "*/5 * * * *"); // Adjust the schedule as needed
+}
 
 Log.Information("Starting up");
 
