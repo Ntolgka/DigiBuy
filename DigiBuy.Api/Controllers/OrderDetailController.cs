@@ -1,4 +1,5 @@
-﻿using DigiBuy.Application.Dtos.OrderDetailDTOs;
+﻿using System.Security.Claims;
+using DigiBuy.Application.Dtos.OrderDetailDTOs;
 using DigiBuy.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +28,14 @@ public class OrderDetailController : ControllerBase
 
         try
         {
-            var createdOrderDetail = await orderDetailService.CreateOrderDetailAsync(orderDetailDto);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(new { message = "User ID not found in claims." });
+            }
+
+            var createdOrderDetail = await orderDetailService.CreateOrderDetailAsync(orderDetailDto, userId);
             return Created(nameof(GetOrderDetailById), createdOrderDetail);
         }
         catch (Exception ex)

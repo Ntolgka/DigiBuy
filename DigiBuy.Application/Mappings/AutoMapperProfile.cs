@@ -43,7 +43,11 @@ public class AutoMapperProfile : Profile
             // OrderDetail
             CreateMap<OrderDetail, ReadOrderDetailDTO>().ReverseMap();
 
-            CreateMap<CreateOrderDetailDTO, OrderDetail>().ReverseMap();
+            CreateMap<CreateOrderDetailDTO, OrderDetail>()
+                .ForMember(dest => dest.InsertDate, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.UpdateDate, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+                .ReverseMap();
             
             CreateMap<OrderDetailDTO, OrderDetail>();
 

@@ -19,8 +19,18 @@ public class OrderService : IOrderService
 
     public async Task<CreateOrderDTO> CreateOrderAsync(CreateOrderDTO orderDto, string userId)
     {
+        var existingOrder = await unitOfWork.GetRepository<Order>()
+            .FirstOrDefaultAsync(o => o.UserId == userId && o.IsActive);
+
+        if (existingOrder != null)
+        {
+            throw new InvalidOperationException("You already have an active order.");
+        }   
+        
         var order = mapper.Map<Order>(orderDto);
         order.UserId = userId;
+        order.IsActive = true;
+        order.InsertDate = DateTime.UtcNow;
         
         if (order.OrderDetails == null)
         {

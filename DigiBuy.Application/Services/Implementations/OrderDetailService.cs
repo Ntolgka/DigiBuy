@@ -17,11 +17,44 @@ public class OrderDetailService : IOrderDetailService
         this.mapper = mapper;
     }
 
-    public async Task<CreateOrderDetailDTO> CreateOrderDetailAsync(CreateOrderDetailDTO orderDetailDto)
+    public async Task<CreateOrderDetailDTO> CreateOrderDetailAsync(CreateOrderDetailDTO orderDetailDto, string userId)
     {
-        var orderDetail = mapper.Map<OrderDetail>(orderDetailDto);
+        var usersOrders = await unitOfWork.GetRepository<Order>()
+            .QueryAsync(o => o.UserId == userId, nameof(Order.OrderDetails));
         
-        await unitOfWork.GetRepository<OrderDetail>().AddAsync(orderDetail);
+        var usersOrder = usersOrders.FirstOrDefault();
+        
+        var product = await unitOfWork.GetRepository<Product>()
+            .FirstOrDefaultAsync(p => p.Id == orderDetailDto.ProductId);
+
+        if (product == null)
+        {
+            throw new KeyNotFoundException($"Product with ID {orderDetailDto.ProductId} not found.");
+        }
+        
+        var existingOrderDetail = usersOrder.OrderDetails
+            .FirstOrDefault(od => od.ProductId == orderDetailDto.ProductId);
+
+        if (existingOrderDetail != null)
+        {
+            existingOrderDetail.Quantity += orderDetailDto.Quantity;
+            usersOrder.TotalAmount += product.Price * orderDetailDto.Quantity;
+            existingOrderDetail.UpdateDate = DateTime.UtcNow;
+            unitOfWork.GetRepository<OrderDetail>().Update(existingOrderDetail);
+        }
+        else
+        {
+            usersOrder.TotalAmount += product.Price * orderDetailDto.Quantity;
+        
+            var orderDetail = mapper.Map<OrderDetail>(orderDetailDto);
+            orderDetail.OrderId = usersOrder.Id;
+            orderDetail.Price = product.Price;
+            orderDetail.ProductId = product.Id;
+        
+        
+            await unitOfWork.GetRepository<OrderDetail>().AddAsync(orderDetail);
+        }
+        
         await unitOfWork.CompleteAsync();
 
         return orderDetailDto;

@@ -4,7 +4,7 @@ namespace DigiBuy.Application.Services.Interfaces;
 
 public interface IOrderDetailService
 {
-    Task<CreateOrderDetailDTO> CreateOrderDetailAsync(CreateOrderDetailDTO orderDetailDto);
+    Task<CreateOrderDetailDTO> CreateOrderDetailAsync(CreateOrderDetailDTO orderDetailDto, string userId);
     Task<ReadOrderDetailDTO> GetOrderDetailByIdAsync(Guid id);
     Task<IEnumerable<ReadOrderDetailDTO>> GetAllOrderDetailsAsync();
     Task<IEnumerable<ReadOrderDetailDTO>> GetOrderDetailsByOrderIdAsync(Guid orderId);
