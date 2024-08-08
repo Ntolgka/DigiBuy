@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using DigiBuy.Application.Dtos.CheckoutDTOs;
 using DigiBuy.Application.Services.Interfaces;
+using DigiBuy.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,11 +20,11 @@ public class CheckoutController : ControllerBase
 
     [HttpPost("process")]
     [Authorize(Roles = "User")]
-    public async Task<IActionResult> ProcessCheckout([FromQuery] string orderId, [FromQuery] string couponCode, [FromQuery] bool usePoints)
+    public async Task<IActionResult> ProcessCheckout([FromQuery] string orderId, [FromQuery] string couponCode, [FromQuery] bool usePoints, [FromBody] CardDetails cardDetails)
     {
         try
         {
-            var result = await checkoutService.CheckoutAsync(orderId, couponCode, User, usePoints);
+            var result = await checkoutService.CheckoutAsync(orderId, couponCode, User, usePoints, cardDetails);
             return Ok(result);
         }
         catch (InvalidOperationException ex)

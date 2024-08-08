@@ -21,8 +21,9 @@ public class CheckoutService : ICheckoutService
         this.mapper = mapper;
         this.userService = userService;
     }
-
-    public async Task<CheckoutResultDTO> CheckoutAsync(string orderId, string couponCode, ClaimsPrincipal userClaims, bool usePoints)
+    
+    // TODO - Make this to add points to user regarding to RewardPercentage and make payment then soft delete the order and delete orderdetail(?)
+    public async Task<CheckoutResultDTO> CheckoutAsync(string orderId, string couponCode, ClaimsPrincipal userClaims, bool usePoints, CardDetails cardDetails)
     {
         var userId = userClaims.FindFirstValue(ClaimTypes.NameIdentifier); // Get user ID from claims
 
@@ -44,6 +45,11 @@ public class CheckoutService : ICheckoutService
         var (totalAmount, discountAmount, pointsToUse) = CalculateOrderAmount(order, user, coupon, usePoints);
 
         // Simulate payment
+        if (!PaymentHelper.ValidateCard(cardDetails))
+        {
+            throw new InvalidOperationException("Invalid card details provided.");
+        }
+        
         SimulateCardPayment(totalAmount);
 
         // Finalize the order
@@ -121,8 +127,7 @@ public class CheckoutService : ICheckoutService
 
     private void SimulateCardPayment(decimal totalAmount)
     {
-        // Simulate a card payment
-        // In a real scenario, integrate with a payment gateway
+        // Send email that the payment was successfull
         Console.WriteLine($"Simulated card payment of ${totalAmount}");
     }
 
@@ -143,6 +148,7 @@ public class CheckoutService : ICheckoutService
         order.CouponAmount = coupon?.Amount ?? 0;
         order.PointsUsed = pointsToUse;
         order.UpdateDate = DateTime.UtcNow;
+        order.IsActive = false;
 
         unitOfWork.GetRepository<Order>().Update(order);
         await userService.UpdateUserAsync(updatedUserDto);
