@@ -9,7 +9,7 @@ public class CreateCouponDTOValidator : AbstractValidator<CreateCouponDTO>
     {
         RuleFor(x => x.Code)
             .NotEmpty().WithMessage("Coupon code is required.")
-            .MaximumLength(50).WithMessage("Coupon code cannot exceed 50 characters.");
+            .MaximumLength(10).WithMessage("Coupon code cannot exceed 10 characters.");
 
         RuleFor(x => x.Amount)
             .GreaterThan(0).WithMessage("Amount must be greater than zero.");

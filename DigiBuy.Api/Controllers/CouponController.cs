@@ -101,18 +101,4 @@ public class CouponController : ControllerBase
             return NotFound("Coupon not found.");
         }
     }
-    
-    [HttpPost("use")]
-    public async Task<IActionResult> UseCoupon([FromQuery] string code, [FromQuery] decimal amountToUse)
-    {
-        try
-        {
-            await couponService.UseCouponAsync(code, amountToUse);
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
 }

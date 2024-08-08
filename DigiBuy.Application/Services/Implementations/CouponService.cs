@@ -1,21 +1,24 @@
-﻿using AutoMapper;
+﻿using System.Text.Json;
+using AutoMapper;
 using DigiBuy.Application.Dtos.CouponDTOs;
 using DigiBuy.Application.Services.Interfaces;
 using DigiBuy.Domain.Entities;
 using DigiBuy.Domain.Repositories;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace DigiBuy.Application.Services.Implementations;
 
-// TODO - Every time coupon is used, the amount will decrease and when its 0, the IsUsed will be true.
 public class CouponService : ICouponService
 {
     private readonly IUnitOfWork unitOfWork;
     private readonly IMapper mapper;
+    private readonly IDistributedCache cache;
 
-    public CouponService(IUnitOfWork unitOfWork, IMapper mapper)
+    public CouponService(IUnitOfWork unitOfWork, IMapper mapper, IDistributedCache cache)
     {
         this.unitOfWork = unitOfWork;
         this.mapper = mapper;
+        this.cache = cache;
     }
 
     public async Task<CreateCouponDTO> CreateCouponAsync(CreateCouponDTO couponDto)
@@ -36,50 +39,80 @@ public class CouponService : ICouponService
         coupon.IsUsed = false;
         await unitOfWork.GetRepository<Coupon>().AddAsync(coupon);
         await unitOfWork.CompleteAsync();
+        
+        await cache.RemoveAsync("AllCoupons");
+        await cache.RemoveAsync($"Coupon_Code_{couponDto.Code}");
+        
         return couponDto;
     }
 
     public async Task<ReadCouponDTO> GetCouponByIdAsync(Guid id)
     {
+        var cacheKey = $"Coupon_{id}";
+        var cachedCoupon = await cache.GetStringAsync(cacheKey);
+
+        if (!string.IsNullOrEmpty(cachedCoupon))
+        {
+            return JsonSerializer.Deserialize<ReadCouponDTO>(cachedCoupon);
+        }
+        
         var coupon = await unitOfWork.GetRepository<Coupon>().GetByIdAsync(id);
-        return mapper.Map<ReadCouponDTO>(coupon);
+        var couponDto = mapper.Map<ReadCouponDTO>(coupon);
+
+        if (couponDto != null)
+        {
+            var serializedCoupon = JsonSerializer.Serialize(couponDto);
+            await cache.SetStringAsync(cacheKey, serializedCoupon);
+        }
+
+        return couponDto;
     }
     
     public async Task<ReadCouponDTO> GetCouponByCodeAsync(string code)
     {
+        var cacheKey = $"Coupon_Code_{code}";
+        var cachedCoupon = await cache.GetStringAsync(cacheKey);
+
+        if (!string.IsNullOrEmpty(cachedCoupon))
+        {
+            return JsonSerializer.Deserialize<ReadCouponDTO>(cachedCoupon);
+        }
+        
         var coupon = await unitOfWork.GetRepository<Coupon>().FirstOrDefaultAsync(c => c.Code == code);
-        return mapper.Map<ReadCouponDTO>(coupon);
+        var couponDto = mapper.Map<ReadCouponDTO>(coupon);
+
+        if (couponDto != null)
+        {
+            var serializedCoupon = JsonSerializer.Serialize(couponDto);
+            await cache.SetStringAsync(cacheKey, serializedCoupon);
+        }
+
+        return couponDto;
     }
-
-    public async Task UseCouponAsync(string code, decimal amountToUse)
-    {
-        var coupon = await unitOfWork.GetRepository<Coupon>().FirstOrDefaultAsync(c => c.Code == code);
-        if (coupon == null || coupon.IsUsed || coupon.ExpiryDate < DateTime.Now)
-        {
-            throw new Exception("Invalid or expired coupon.");
-        }
-
-        if (coupon.Amount < amountToUse)
-        {
-            throw new Exception("Coupon amount is insufficient.");
-        }
-
-        coupon.Amount -= amountToUse;
-
-        if (coupon.Amount <= 0)
-        {
-            coupon.IsUsed = true;
-        }
-
-        unitOfWork.GetRepository<Coupon>().Update(coupon);
-        await unitOfWork.CompleteAsync();
-    }
+    
 
     public async Task<IEnumerable<ReadCouponDTO>> GetAllCouponsAsync()
     {
+        var cacheKey = "AllCoupons";
+        var cachedCoupons = await cache.GetStringAsync(cacheKey);
+
+        if (!string.IsNullOrEmpty(cachedCoupons))
+        {
+            return JsonSerializer.Deserialize<IEnumerable<ReadCouponDTO>>(cachedCoupons);
+        }
+        
         var coupons = await unitOfWork.GetRepository<Coupon>().GetAllAsync();
-        return mapper.Map<IEnumerable<ReadCouponDTO>>(coupons);
+        var couponDtos = mapper.Map<IEnumerable<ReadCouponDTO>>(coupons);
+
+        if (couponDtos != null && couponDtos.Any())
+        {
+            var serializedCoupons = JsonSerializer.Serialize(couponDtos);
+            await cache.SetStringAsync(cacheKey, serializedCoupons);
+        }
+
+        return couponDtos;
     }
+    
 
     public async Task UpdateCouponAsync(Guid id, UpdateCouponDTO couponDto)
     {
@@ -93,6 +126,10 @@ public class CouponService : ICouponService
         coupon.UpdateDate = DateTime.UtcNow;
         unitOfWork.GetRepository<Coupon>().Update(coupon);
         await unitOfWork.CompleteAsync();
+        
+        await cache.RemoveAsync($"Coupon_{id}");
+        await cache.RemoveAsync($"Coupon_Code_{coupon.Code}");
+        await cache.RemoveAsync("AllCoupons");
     }
 
     public async Task DeleteCouponAsync(Guid id)
@@ -106,5 +143,9 @@ public class CouponService : ICouponService
         coupon.IsUsed = true;
         unitOfWork.GetRepository<Coupon>().Update(coupon);
         await unitOfWork.CompleteAsync();
+        
+        await cache.RemoveAsync($"Coupon_{id}");
+        await cache.RemoveAsync($"Coupon_Code_{coupon.Code}");
+        await cache.RemoveAsync("AllCoupons");
     }
 }

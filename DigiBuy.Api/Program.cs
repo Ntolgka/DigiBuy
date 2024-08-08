@@ -23,6 +23,7 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -106,6 +107,16 @@ builder.Services.AddHangfire(configuration => configuration
     .UsePostgreSqlStorage(builder.Configuration.GetConnectionString("HangfireConnection")));
 
 builder.Services.AddHangfireServer();
+
+// Redis
+var redisConfig = new ConfigurationOptions();
+redisConfig.DefaultDatabase = 0;
+redisConfig.EndPoints.Add(builder.Configuration["Redis:Host"], Convert.ToInt32(builder.Configuration["Redis:Port"]));
+builder.Services.AddStackExchangeRedisCache(opt =>
+{
+    opt.ConfigurationOptions = redisConfig;
+    opt.InstanceName = builder.Configuration["Redis:InstanceName"];
+});
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile).Assembly);
