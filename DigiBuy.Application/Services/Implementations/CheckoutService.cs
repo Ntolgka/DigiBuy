@@ -178,6 +178,11 @@ public class CheckoutService : ICheckoutService
         order.UpdateDate = DateTime.UtcNow;
         order.IsActive = false;
         order.CouponCode = coupon?.Code ?? string.Empty;
+
+        foreach (var products in order.OrderDetails)
+        {
+            products.IsActive = false;
+        }
         
         unitOfWork.GetRepository<Order>().Update(order);
         

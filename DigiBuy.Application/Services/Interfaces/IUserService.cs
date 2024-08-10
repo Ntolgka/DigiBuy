@@ -10,6 +10,7 @@ public interface IUserService
     Task LogoutAsync();
     Task ChangePasswordAsync(ChangePasswordDTO changePasswordDto);
     Task<ReadUserDTO> GetUserByIdAsync(string userId);
+    Task<decimal> GetUserPointsAsync(string userId);
     Task UpdateUserAsync(UpdateUserDTO userDto);    
     Task DeleteUserAsync(string userId);
 }

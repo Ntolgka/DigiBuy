@@ -4,7 +4,6 @@ using DigiBuy.Application.Services.Interfaces;
 using DigiBuy.Domain.Entities;
 using DigiBuy.Domain.Enumerations;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace DigiBuy.Application.Services.Implementations;
@@ -159,6 +158,26 @@ public class UserService : IUserService
             }
 
             return mapper.Map<ReadUserDTO>(user);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Exception occurred while retrieving user by ID: {UserId}", userId);
+            throw;
+        }
+    }
+    
+    public async Task<decimal> GetUserPointsAsync(string userId)
+    {
+        try
+        {
+            var user = await userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                logger.LogWarning("User not found for ID: {UserId}", userId);
+                throw new Exception("User not found.");
+            }
+
+            return user.PointsBalance;
         }
         catch (Exception ex)
         {

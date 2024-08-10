@@ -85,6 +85,14 @@ public class UserController : ControllerBase
         var user = await userService.GetUserByIdAsync(id);
         return user != null ? Ok(user) : NotFound("User not found.");
     }
+    
+    [HttpGet("points/{id}")]
+    [Authorize]
+    public async Task<IActionResult> GetUserPoints(string id)
+    {
+        var user = await userService.GetUserPointsAsync(id);
+        return user != null ? Ok(user) : NotFound("User not found.");
+    }
 
     [HttpPut("update")]
     [Authorize]
