@@ -80,9 +80,11 @@ public class AutoMapperProfile : Profile
             CreateMap<UpdateUserDTO, User>()
                 .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))
                 .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.LastName))
-                .ForMember(dest => dest.WalletBalance, opt => opt.Ignore()) 
-                .ForMember(dest => dest.PointsBalance, opt => opt.Ignore()) 
-                .ForMember(dest => dest.Status, opt => opt.Ignore()) 
+                .ForMember(dest => dest.WalletBalance, opt => opt.MapFrom(src => src.WalletBalance))
+                .ForMember(dest => dest.PointsBalance, opt => opt.MapFrom(src => src.PointsBalance))
+                .ForMember(dest => dest.WalletBalance, opt => opt.Condition((src, dest) => src.WalletBalance != default(decimal))) 
+                .ForMember(dest => dest.PointsBalance, opt => opt.Condition((src, dest) => src.PointsBalance != default(decimal))) 
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
                 .ReverseMap();
         }
 }

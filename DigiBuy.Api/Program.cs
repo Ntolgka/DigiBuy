@@ -97,7 +97,8 @@ builder.Services.AddAuthentication(options =>
 
 // DB Connection (PostgreSQL)
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresSqlConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresSqlConnection")).EnableSensitiveDataLogging());
+
 
 // Hangfire Connection
 builder.Services.AddHangfire(configuration => configuration

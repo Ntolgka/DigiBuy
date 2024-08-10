@@ -18,8 +18,18 @@ public class CheckoutController : ControllerBase
 
     [HttpPost("process")]
     [Authorize(Roles = "User")]
-    public async Task<IActionResult> ProcessCheckout([FromQuery] string orderId, [FromQuery] string couponCode, [FromQuery] bool usePoints, [FromBody] CardDetails cardDetails)
+    public async Task<IActionResult> ProcessCheckout([FromQuery] string orderId, [FromQuery] string? couponCode, [FromQuery] bool usePoints, [FromBody] CardDetails cardDetails)
     {
+        if (string.IsNullOrEmpty(orderId))
+        {
+            return BadRequest(new { message = "Order ID is required." });
+        }
+
+        if (cardDetails == null && !usePoints)
+        {
+            return BadRequest(new { message = "Card details are required unless using points only." });
+        }
+
         try
         {
             var result = await checkoutService.CheckoutAsync(orderId, couponCode, User, usePoints, cardDetails);

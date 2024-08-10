@@ -23,56 +23,50 @@ public class CheckoutService : ICheckoutService
         this.userService = userService;
         this.emailService = emailService;
     }
-    
-    // TODO - Make this to add points to user regarding to RewardPercentage and make payment then soft delete the order and delete orderdetail(?)
-    public async Task<CheckoutResultDTO> CheckoutAsync(string orderId, string couponCode, ClaimsPrincipal userClaims, bool usePoints, CardDetails cardDetails)
+
+    public async Task<CheckoutResultDTO> CheckoutAsync(string orderId, string? couponCode, ClaimsPrincipal userClaims, bool usePoints, CardDetails cardDetails)
     {
-        var userId = userClaims.FindFirstValue(ClaimTypes.NameIdentifier); // Get user ID from claims
+        var userId = userClaims.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))
         {
             throw new InvalidOperationException("User not authenticated.");
         }
 
-        // Retrieve the existing order
         var order = await GetOrderWithDetailsAsync(orderId, userId);
-
-        // Retrieve user information
         var user = await GetUserAsync(userId);
-
-        // Validate the coupon
         var coupon = await ValidateCouponAsync(couponCode);
 
-        // Calculate the total amount and apply coupon/points
-        var (totalAmount, discountAmount, pointsToUse) = CalculateOrderAmount(order, user, coupon, usePoints);
-
-        // Simulate payment
-        if (!PaymentHelper.ValidateCard(cardDetails))
-        {
-            throw new InvalidOperationException("Invalid card details provided.");
-        }
+        // Calculate order amount, points to use, and new points earned
+        var (totalAmount, discountAmount, pointsToUse, newPointsEarned) = await CalculateOrderAmount(order, user, coupon, usePoints);
         
-        await SimulateCardPayment(totalAmount, user.Email);
+        var (amountToChargeByCard, amountToDeductFromWallet) = DeterminePaymentAmounts(user, totalAmount);
+        
+        if (amountToChargeByCard > 0)
+        {
+            ValidateCardAndCharge(amountToChargeByCard, cardDetails, user.Email);
+        }
 
-        // Finalize the order
-        await FinalizeOrderAsync(user, pointsToUse, order, coupon, totalAmount);
+        await FinalizeOrderAsync(user, pointsToUse, order, coupon, totalAmount, amountToDeductFromWallet, newPointsEarned);
 
         return new CheckoutResultDTO
         {
-            TotalAmount = totalAmount,
+            TotalAmount = order.TotalAmount,
             DiscountAmount = discountAmount,
-            PointsUsed = pointsToUse
+            CouponCode = coupon.Code,
+            PointsUsed = pointsToUse,
+            PointsEarned = newPointsEarned,
+            AmountChargedToCard = amountToChargeByCard,
+            AmountDeductedFromWallet = amountToDeductFromWallet
         };
     }
 
     private async Task<Order> GetOrderWithDetailsAsync(string orderId, string userId)
     {
-        // Eagerly load OrderDetails
         var orders = await unitOfWork.GetRepository<Order>()
             .QueryAsync(o => o.Id.ToString() == orderId && o.UserId == userId, nameof(Order.OrderDetails));
-            
-        var order = orders.FirstOrDefault();
 
+        var order = orders.FirstOrDefault();
         if (order == null)
         {
             throw new InvalidOperationException("Order not found or does not belong to the user.");
@@ -107,59 +101,93 @@ public class CheckoutService : ICheckoutService
         return coupon;
     }
 
-    private (decimal totalAmount, decimal discountAmount, decimal pointsToUse) CalculateOrderAmount(Order order, User user, Coupon coupon, bool usePoints)
+    private async Task<(decimal totalAmount, decimal discountAmount, decimal pointsToUse, decimal newPointsEarned)> CalculateOrderAmount(Order order, User user, Coupon coupon, bool usePoints)
     {
-        decimal totalAmount = order.OrderDetails.Sum(od => od.Price * od.Quantity);
+        decimal totalAmount = order.TotalAmount;
         decimal discountAmount = coupon?.Amount ?? 0;
         totalAmount -= discountAmount;
 
         decimal pointsToUse = 0;
-        if (usePoints)
+        if (usePoints && totalAmount > 0)
         {
-            pointsToUse = PointsHelper.CalculatePointsToUse(user, totalAmount);
-            if (pointsToUse > user.PointsBalance)
-            {
-                pointsToUse = user.PointsBalance;
-            }
+            pointsToUse = Math.Min(user.PointsBalance, totalAmount);
             totalAmount -= pointsToUse;
         }
 
-        return (totalAmount, discountAmount, pointsToUse);
+        decimal newPointsEarned = 0;
+        
+        if (totalAmount == 0)
+            return (totalAmount, discountAmount, pointsToUse, newPointsEarned);
+        
+        foreach (var detail in order.OrderDetails)
+        {
+            var product = await unitOfWork.GetRepository<Product>().FirstOrDefaultAsync(p => p.Id == detail.ProductId);
+            if (product != null)
+            {
+                decimal productPrice = detail.Price * detail.Quantity;
+                decimal applicablePrice = productPrice - Math.Min(pointsToUse, productPrice);
+                pointsToUse -= Math.Min(pointsToUse, productPrice);
+
+                // Calculate reward points based on the remaining amount after points deduction
+                decimal rewardPoints = applicablePrice * product.RewardPercentage / 100;
+                rewardPoints = Math.Min(rewardPoints, product.MaxRewardPoints);
+
+                newPointsEarned += rewardPoints;
+            }
+        }
+        return (totalAmount, discountAmount, pointsToUse, newPointsEarned);
     }
 
-    private async Task SimulateCardPayment(decimal totalAmount, string userEmail)
+    private (decimal amountToChargeByCard, decimal amountToDeductFromWallet) DeterminePaymentAmounts(User user, decimal totalAmount)
     {
+        decimal amountToDeductFromWallet = Math.Min(totalAmount, user.WalletBalance);
+        decimal amountToChargeByCard = totalAmount - amountToDeductFromWallet;
+
+        return (amountToChargeByCard, amountToDeductFromWallet);
+    }
+
+    private void ValidateCardAndCharge(decimal amountToChargeByCard, CardDetails cardDetails, string userEmail)
+    {
+        if (!PaymentHelper.ValidateCard(cardDetails))
+        {   
+            throw new InvalidOperationException("Invalid card details provided.");
+        }
+        
         // Send a confirmation email
         var subject = "Payment Confirmation";
-        var message = $"Dear customer, your payment of ${totalAmount} has been successfully processed.";
-    
+        var message = $"Dear customer, your payment of ₺{amountToChargeByCard} has been successfully processed.";
+
         emailService.EnqueueEmail(userEmail, subject, message);
     }
 
-    private async Task FinalizeOrderAsync(User user, decimal pointsToUse, Order order, Coupon coupon, decimal totalAmount)
+    private async Task FinalizeOrderAsync(User user, decimal pointsToUse, Order order, Coupon coupon, decimal totalAmount, decimal amountDeductedFromWallet, decimal newPointsEarned)
     {
-        PointsHelper.DeductPoints(user, pointsToUse);
-        user.WalletBalance -= Math.Max(totalAmount, 0);
-
+        // Deduct points and update user balances
+        user.PointsBalance -= pointsToUse;
+        user.WalletBalance -= amountDeductedFromWallet;
+        user.PointsBalance += newPointsEarned;
+        
         if (coupon != null)
         {
             coupon.IsUsed = true;
             unitOfWork.GetRepository<Coupon>().Update(coupon);
         }
-
-        var updatedUserDto = mapper.Map<UpdateUserDTO>(user);
-
-        order.TotalAmount = totalAmount;
+        
         order.CouponAmount = coupon?.Amount ?? 0;
         order.PointsUsed = pointsToUse;
         order.UpdateDate = DateTime.UtcNow;
         order.IsActive = false;
-
+        order.CouponCode = coupon?.Code ?? string.Empty;
+        
         unitOfWork.GetRepository<Order>().Update(order);
-        await userService.UpdateUserAsync(updatedUserDto);
+        
+        var userDto = mapper.Map<UpdateUserDTO>(user);
+        await userService.UpdateUserAsync(userDto);
+
         await unitOfWork.CompleteAsync();
     }
 }
+
 
 
 
