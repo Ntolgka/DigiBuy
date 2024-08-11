@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
 using AutoMapper;
+using DigiBuy.Application.Dtos.CategoryDTOs;
+using DigiBuy.Application.Dtos.ProductCategoryDTOs;
 using DigiBuy.Application.Dtos.ProductDTOs;
 using DigiBuy.Application.Services.Interfaces;
 using DigiBuy.Domain.Entities;
@@ -170,6 +172,57 @@ public class ProductService : IProductService
         await cache.RemoveAsync($"Product_{id}");
         await cache.RemoveAsync("AllProducts");
         await cache.RemoveAsync($"ProductsByCategory_{product.ProductCategories.FirstOrDefault()?.CategoryId}");
+    }
+    
+    public async Task UpdateProductStockAsync(Guid productId, int newStock)
+    {
+        var productRepository = unitOfWork.GetRepository<Product>();
+        var product = await productRepository.GetByIdAsync(productId);
+
+        if (product == null)
+        {
+            throw new KeyNotFoundException("Product not found.");
+        }
+
+        product.Stock = newStock;
+        product.UpdateDate = DateTime.UtcNow;
+    
+        productRepository.Update(product);
+        await unitOfWork.CompleteAsync();
+        
+        await cache.RemoveAsync($"Product_{productId}");
+        await cache.RemoveAsync("AllProducts");
+        await cache.RemoveAsync($"ProductsByCategory_{product.ProductCategories.FirstOrDefault()?.CategoryId}");
+    }
+    
+    public async Task<IEnumerable<ReadProductCategoryDTO>> GetProductCategoriesAsync(Guid productId)
+    {
+        var cacheKey = $"ProductCategories_{productId}";
+        var cachedCategories = await cache.GetStringAsync(cacheKey);
+
+        if (!string.IsNullOrEmpty(cachedCategories))
+        {
+            return JsonSerializer.Deserialize<IEnumerable<ReadProductCategoryDTO>>(cachedCategories);
+        }
+
+        var product = await unitOfWork.GetRepository<Product>()
+            .GetByIdAsync(productId, nameof(Product.ProductCategories), nameof(Product.ProductCategories) + "." + nameof(ProductCategory.Category));
+    
+        if (product == null)
+        {
+            throw new KeyNotFoundException("Product not found.");
+        }
+
+        var categories = product.ProductCategories.Select(pc => pc.Category);
+        var categoryDtos = mapper.Map<IEnumerable<ReadProductCategoryDTO>>(categories);
+
+        var serializedCategories = JsonSerializer.Serialize(categoryDtos);
+        await cache.SetStringAsync(cacheKey, serializedCategories, new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
+        });
+
+        return categoryDtos;
     }
 
     public async Task AddCategoryToProductAsync(Guid productId, Guid categoryId)

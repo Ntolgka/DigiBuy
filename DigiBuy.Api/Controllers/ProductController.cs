@@ -74,6 +74,26 @@ public class ProductController : ControllerBase
         await productService.UpdateProductAsync(id, productDto);
         return NoContent();
     }
+    
+    [HttpPut("{id}/stock")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateProductStock(Guid id, [FromBody] int newStock)
+    {
+        if (newStock < 0)
+        {
+            return BadRequest("Stock cannot be negative.");
+        }
+
+        try
+        {
+            await productService.UpdateProductStockAsync(id, newStock);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
@@ -81,6 +101,25 @@ public class ProductController : ControllerBase
     {
         await productService.DeleteProductAsync(id);
         return NoContent();
+    }
+    
+    [HttpGet("{id}/categories")]
+    [Authorize(Roles = "User")]
+    public async Task<IActionResult> GetProductCategories(Guid id)
+    {
+        try
+        {
+            var categories = await productService.GetProductCategoriesAsync(id);
+            return Ok(categories);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound("Product not found.");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
     }
 
     [HttpPost("{productId}/categories/{categoryId}")]

@@ -65,6 +65,8 @@ public class AutoMapperProfile : Profile
             CreateMap<ProductCategory, ReadProductCategoryDTO>().ReverseMap();
 
             CreateMap<CreateProductCategoryDTO, ProductCategory>().ReverseMap();
+            
+            CreateMap<Category, ReadProductCategoryDTO>();
 
             // User
             CreateMap<User, ReadUserDTO>().ReverseMap();

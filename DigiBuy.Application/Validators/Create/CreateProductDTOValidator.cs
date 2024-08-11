@@ -17,6 +17,8 @@ public class CreateProductDTOValidator : AbstractValidator<CreateProductDTO>
 
         RuleFor(x => x.Price)
             .GreaterThan(0).WithMessage("Price must be greater than zero.");
+        RuleFor(x => x.Stock)
+            .NotEmpty().WithMessage("Product stock is required.");
 
         RuleFor(x => x.RewardPercentage)
             .InclusiveBetween(0, 100).WithMessage("Reward percentage must be between 0 and 100.");

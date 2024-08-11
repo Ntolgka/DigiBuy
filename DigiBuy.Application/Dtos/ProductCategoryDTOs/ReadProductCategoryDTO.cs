@@ -2,6 +2,5 @@
 
 public class ReadProductCategoryDTO
 {
-    public Guid ProductId { get; set; }
-    public Guid CategoryId { get; set; }
+    public string Name { get; set; }
 }
