@@ -128,4 +128,34 @@ public class OrderDetailController : ControllerBase
             return StatusCode(500, new { message = ex.Message });
         }
     }
+    
+    [HttpGet("active/user")]
+    [Authorize(Roles = "User")]
+    public async Task<IActionResult> GetActiveOrderDetailsByUserId()
+    {
+        try
+        {
+            var orders = await orderDetailService.GetActiveOrderDetailsByUserIdAsync();
+            return Ok(orders);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+    
+    [HttpGet("inactive/user")]
+    [Authorize(Roles = "User")]
+    public async Task<IActionResult> GetInactiveOrderDetailsByUserId()
+    {
+        try
+        {
+            var orders = await orderDetailService.GetInActiveOrderDetailsByUserIdAsync();
+            return Ok(orders);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
 }

@@ -1,9 +1,12 @@
-﻿using System.Text.Json;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using AutoMapper;
 using DigiBuy.Application.Dtos.OrderDetailDTOs;
+using DigiBuy.Application.Dtos.OrderDTOs;
 using DigiBuy.Application.Services.Interfaces;
 using DigiBuy.Domain.Entities;
 using DigiBuy.Domain.Repositories;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace DigiBuy.Application.Services.Implementations;
@@ -13,12 +16,14 @@ public class OrderDetailService : IOrderDetailService
     private readonly IUnitOfWork unitOfWork;
     private readonly IMapper mapper;
     private readonly IDistributedCache cache;
+    private readonly IHttpContextAccessor httpContextAccessor;
 
-    public OrderDetailService(IUnitOfWork unitOfWork, IMapper mapper, IDistributedCache cache)
+    public OrderDetailService(IUnitOfWork unitOfWork, IMapper mapper, IDistributedCache cache, IHttpContextAccessor httpContextAccessor)
     {
         this.unitOfWork = unitOfWork;
         this.mapper = mapper;
         this.cache = cache;
+        this.httpContextAccessor = httpContextAccessor;
         
     }
 
@@ -65,6 +70,8 @@ public class OrderDetailService : IOrderDetailService
         await cache.RemoveAsync($"OrderDetail_{orderDetailDto.ProductId}");
         await cache.RemoveAsync($"OrderDetails_Order_{usersOrder.Id}");
         await cache.RemoveAsync("AllOrderDetails");
+        await cache.RemoveAsync($"ActiveOrderDetails_User_{userId}");
+        await cache.RemoveAsync($"InactiveOrderDetails_User_{userId}");
 
         return orderDetailDto;
     }
@@ -131,6 +138,8 @@ public class OrderDetailService : IOrderDetailService
         await cache.RemoveAsync($"OrderDetail_{id}");
         await cache.RemoveAsync($"OrderDetails_Order_{orderDetail.OrderId}");
         await cache.RemoveAsync("AllOrderDetails");
+        await cache.RemoveAsync($"ActiveOrderDetails_User_{orderDetail.Order.UserId}");
+        await cache.RemoveAsync($"InactiveOrderDetails_User_{orderDetail.Order.UserId}");
     }
 
     public async Task DeleteOrderDetailAsync(Guid id)
@@ -147,6 +156,8 @@ public class OrderDetailService : IOrderDetailService
         await cache.RemoveAsync($"OrderDetail_{id}");
         await cache.RemoveAsync($"OrderDetails_Order_{orderDetail.OrderId}");
         await cache.RemoveAsync("AllOrderDetails");
+        await cache.RemoveAsync($"ActiveOrderDetails_User_{orderDetail.Order.UserId}");
+        await cache.RemoveAsync($"InactiveOrderDetails_User_{orderDetail.Order.UserId}");
     }
 
     // Retrieve a collection of OrderDetail
@@ -170,6 +181,71 @@ public class OrderDetailService : IOrderDetailService
             var serializedOrderDetails = JsonSerializer.Serialize(orderDetailDtos);
             await cache.SetStringAsync(cacheKey, serializedOrderDetails);
         }
+        return orderDetailDtos;
+    }
+    
+    public async Task<IEnumerable<ReadOrderDetailDTO>> GetActiveOrderDetailsByUserIdAsync()
+    {
+        var userClaims = httpContextAccessor.HttpContext.User;
+        var userId = userClaims.FindFirstValue(ClaimTypes.NameIdentifier);
+        
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new InvalidOperationException("User not authenticated.");
+        }
+        
+        var cacheKey = $"ActiveOrderDetails_User_{userId}";
+        var cachedOrderDetails = await cache.GetStringAsync(cacheKey);
+
+        if (!string.IsNullOrEmpty(cachedOrderDetails))
+        {
+            return JsonSerializer.Deserialize<IEnumerable<ReadOrderDetailDTO>>(cachedOrderDetails);
+        }
+        
+        var activeOrderDetails = await unitOfWork.GetRepository<OrderDetail>()
+            .QueryAsync(od => od.IsActive && od.Order.UserId == userId);
+        
+        var orderDetailDtos = mapper.Map<IEnumerable<ReadOrderDetailDTO>>(activeOrderDetails);
+        
+        if (orderDetailDtos != null && orderDetailDtos.Any())
+        {
+            var serializedOrderDetails = JsonSerializer.Serialize(orderDetailDtos);
+            await cache.SetStringAsync(cacheKey, serializedOrderDetails);
+        }
+
+        return orderDetailDtos;
+    }
+    
+    public async Task<IEnumerable<ReadOrderDetailDTO>> GetInActiveOrderDetailsByUserIdAsync()
+    {
+        // Get the current user's claims and userId
+        var userClaims = httpContextAccessor.HttpContext.User;
+        var userId = userClaims.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new InvalidOperationException("User not authenticated.");
+        }
+        
+        var cacheKey = $"InactiveOrderDetails_User_{userId}";
+        var cachedOrderDetails = await cache.GetStringAsync(cacheKey);
+
+        if (!string.IsNullOrEmpty(cachedOrderDetails))
+        {
+            return JsonSerializer.Deserialize<IEnumerable<ReadOrderDetailDTO>>(cachedOrderDetails);
+        }
+
+        var inactiveOrderDetails = await unitOfWork.GetRepository<OrderDetail>()
+            .QueryAsync(od => !od.IsActive && od.Order.UserId == userId);
+
+        var orderDetailDtos = mapper.Map<IEnumerable<ReadOrderDetailDTO>>(inactiveOrderDetails);
+
+        if (orderDetailDtos != null && orderDetailDtos.Any())
+        {
+            var serializedOrderDetails = JsonSerializer.Serialize(orderDetailDtos);
+            await cache.SetStringAsync(cacheKey, serializedOrderDetails);
+        }
+
         return orderDetailDtos;
     }
 }

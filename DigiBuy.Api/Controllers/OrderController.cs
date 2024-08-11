@@ -85,6 +85,36 @@ public class OrderController : ControllerBase
             return StatusCode(500, new { message = ex.Message });
         }
     }
+    
+    [HttpGet("active/user")]
+    [Authorize(Roles = "User")]
+    public async Task<IActionResult> GetActiveOrdersByUserId()
+    {
+        try
+        {
+            var orders = await orderService.GetActiveOrdersByUserIdAsync();
+            return Ok(orders);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("inactive/user")]
+    [Authorize(Roles = "User")]
+    public async Task<IActionResult> GetInactiveOrdersByUserId()
+    {
+        try
+        {
+            var orders = await orderService.GetInactiveOrdersByUserIdAsync();
+            return Ok(orders);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
 
     [HttpPut("{id}")]
     [Authorize(Roles = "User")]

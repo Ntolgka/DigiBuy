@@ -8,6 +8,8 @@ public interface IOrderDetailService
     Task<ReadOrderDetailDTO> GetOrderDetailByIdAsync(Guid id);
     Task<IEnumerable<ReadOrderDetailDTO>> GetAllOrderDetailsAsync();
     Task<IEnumerable<ReadOrderDetailDTO>> GetOrderDetailsByOrderIdAsync(Guid orderId);
+    Task<IEnumerable<ReadOrderDetailDTO>> GetActiveOrderDetailsByUserIdAsync();
+    Task<IEnumerable<ReadOrderDetailDTO>> GetInActiveOrderDetailsByUserIdAsync();
     Task UpdateOrderDetailAsync(Guid id, UpdateOrderDetailDTO orderDetailDto);  
     Task DeleteOrderDetailAsync(Guid id);
 }   

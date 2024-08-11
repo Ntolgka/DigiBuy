@@ -1,8 +1,10 @@
-﻿using AutoMapper;
+﻿using System.Security.Claims;
+using AutoMapper;
 using DigiBuy.Application.Dtos.OrderDTOs;
 using DigiBuy.Application.Services.Interfaces;
 using DigiBuy.Domain.Entities;
 using DigiBuy.Domain.Repositories;
+using Microsoft.AspNetCore.Http;
 
 namespace DigiBuy.Application.Services.Implementations;
 
@@ -10,11 +12,13 @@ public class OrderService : IOrderService
 {
     private readonly IUnitOfWork unitOfWork;
     private readonly IMapper mapper;
+    private readonly IHttpContextAccessor httpContextAccessor;
 
-    public OrderService(IUnitOfWork unitOfWork, IMapper mapper)
+    public OrderService(IUnitOfWork unitOfWork, IMapper mapper, IHttpContextAccessor httpContextAccessor)
     {
         this.unitOfWork = unitOfWork;
         this.mapper = mapper;
+        this.httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<CreateOrderDTO> CreateOrderAsync(CreateOrderDTO orderDto, string userId)
@@ -85,6 +89,36 @@ public class OrderService : IOrderService
     {
         var orders = await unitOfWork.GetRepository<Order>()
             .QueryAsync(o => o.UserId == userId, nameof(Order.OrderDetails));
+        return mapper.Map<IEnumerable<ReadOrderDTO>>(orders);
+    }
+    
+    public async Task<IEnumerable<ReadOrderDTO>> GetActiveOrdersByUserIdAsync()
+    {
+        var userClaims = httpContextAccessor.HttpContext.User;
+        var userId = userClaims.FindFirstValue(ClaimTypes.NameIdentifier);
+        
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new InvalidOperationException("User not authenticated.");
+        }
+        
+        var orders = await unitOfWork.GetRepository<Order>()
+            .QueryAsync(o => o.UserId == userId && o.IsActive, nameof(Order.OrderDetails));
+        return mapper.Map<IEnumerable<ReadOrderDTO>>(orders);
+    }
+    
+    public async Task<IEnumerable<ReadOrderDTO>> GetInactiveOrdersByUserIdAsync()
+    {
+        var userClaims = httpContextAccessor.HttpContext.User;
+        var userId = userClaims.FindFirstValue(ClaimTypes.NameIdentifier);
+        
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new InvalidOperationException("User not authenticated.");
+        }
+        
+        var orders = await unitOfWork.GetRepository<Order>()
+            .QueryAsync(o => o.UserId == userId && !o.IsActive, nameof(Order.OrderDetails));
         return mapper.Map<IEnumerable<ReadOrderDTO>>(orders);
     }
 
