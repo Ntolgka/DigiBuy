@@ -25,9 +25,11 @@ public class ProductService : IProductService
     {
         var product = mapper.Map<Product>(productDto);
         product.InsertDate = DateTime.UtcNow;
+        product.IsActive = true;
         await unitOfWork.GetRepository<Product>().AddAsync(product);
         await unitOfWork.CompleteAsync();
         
+        await cache.RemoveAsync($"ProductsByStatus_{product.IsActive}");
         await cache.RemoveAsync("AllProducts");
         await cache.RemoveAsync($"ProductsByCategory_{product.ProductCategories.FirstOrDefault()?.CategoryId}");
         
@@ -108,10 +110,35 @@ public class ProductService : IProductService
 
         return productDtos;
     }
+    
+    public async Task<IEnumerable<ReadProductDTO>> GetProductsByStatusAsync(bool status)
+    {
+        var cacheKey = $"ProductsByStatus_{status}";
+        var cachedProducts = await cache.GetStringAsync(cacheKey);
+    
+        if (!string.IsNullOrEmpty(cachedProducts))
+        {
+            return JsonSerializer.Deserialize<IEnumerable<ReadProductDTO>>(cachedProducts);
+        }
+        
+        var products = await unitOfWork.GetRepository<Product>()
+            .QueryAsync((c => c.IsActive == status), nameof(Product.ProductCategories), nameof(Product.ProductCategories) + "." + nameof(ProductCategory.Category));
+        
+        var productDtos = mapper.Map<IEnumerable<ReadProductDTO>>(products);
+
+        var serializedProducts = JsonSerializer.Serialize(productDtos);
+        await cache.SetStringAsync(cacheKey, serializedProducts, new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
+        });
+
+        return productDtos;
+    }
 
     public async Task UpdateProductAsync(Guid id, UpdateProductDTO productDto)
     {
         var product = await unitOfWork.GetRepository<Product>().GetByIdAsync(id);
+        var originalStatus = product.IsActive;
         if (product == null)
         {
             throw new KeyNotFoundException("Product not found");
@@ -122,6 +149,8 @@ public class ProductService : IProductService
         unitOfWork.GetRepository<Product>().Update(product);
         await unitOfWork.CompleteAsync();
         
+        await cache.RemoveAsync($"ProductsByStatus_{product.IsActive}");
+        await cache.RemoveAsync($"ProductsByStatus_{originalStatus}");
         await cache.RemoveAsync($"Product_{id}");
         await cache.RemoveAsync("AllProducts");
         await cache.RemoveAsync($"ProductsByCategory_{product.ProductCategories.FirstOrDefault()?.CategoryId}");

@@ -53,6 +53,14 @@ public class ProductController : ControllerBase
         var products = await productService.GetProductsByCategoryAsync(categoryId);
         return Ok(products);
     }
+    
+    [HttpGet("by-status/{status}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetProductsByStatus(bool status)
+    {
+        var products = await productService.GetProductsByStatusAsync(status);
+        return Ok(products);
+    }
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin")]

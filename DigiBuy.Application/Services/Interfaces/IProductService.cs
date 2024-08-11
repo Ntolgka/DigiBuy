@@ -8,6 +8,7 @@ public interface IProductService
     Task<ReadProductDTO> GetProductByIdAsync(Guid id);
     Task<IEnumerable<ReadProductDTO>> GetAllProductsAsync();
     Task<IEnumerable<ReadProductDTO>> GetProductsByCategoryAsync(Guid categoryId);
+    Task<IEnumerable<ReadProductDTO>> GetProductsByStatusAsync(bool status);
     Task UpdateProductAsync(Guid id, UpdateProductDTO productDto);
     Task DeleteProductAsync(Guid id);
     Task AddCategoryToProductAsync(Guid productId, Guid categoryId);
