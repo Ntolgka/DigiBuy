@@ -8,10 +8,12 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
 {
     public void Configure(EntityTypeBuilder<Order> builder)
     {
+        builder.Property(o => o.OrderNumber).IsRequired().HasMaxLength(9);
+        builder.HasIndex(o => o.OrderNumber).IsUnique();
         builder.HasKey(o => o.Id);
         builder.Property(o => o.TotalAmount).IsRequired().HasColumnType("decimal(18,2)");
         builder.Property(o => o.CouponAmount).IsRequired().HasColumnType("decimal(18,2)");
-        builder.Property(o => o.CouponCode).HasMaxLength(50);
+        builder.Property(o => o.CouponCode).HasMaxLength(10);
         builder.Property(o => o.PointsUsed).IsRequired().HasColumnType("decimal(18,2)");
         
         builder.HasOne(o => o.User)

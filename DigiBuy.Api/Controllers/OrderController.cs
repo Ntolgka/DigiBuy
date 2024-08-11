@@ -62,6 +62,25 @@ public class OrderController : ControllerBase
             return StatusCode(500, new { message = ex.Message });
         }
     }
+    
+    [HttpGet("by-order-number/{orderNumber}")]
+    [Authorize(Roles = "User")]
+    public async Task<IActionResult> GetOrderByOrderNumber(string orderNumber)
+    {
+        try
+        {
+            var order = await orderService.GetOrderByOrderNumberAsync(orderNumber);
+            return Ok(order);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound("Order not found.");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
 
     [HttpGet]
     [Authorize(Roles = "Admin")]

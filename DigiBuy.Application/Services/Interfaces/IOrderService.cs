@@ -7,6 +7,7 @@ public interface IOrderService
 {
     Task<CreateOrderDTO> CreateOrderAsync(CreateOrderDTO orderDto, string userId);
     Task<ReadOrderDTO> GetOrderByIdAsync(Guid id);
+    Task<ReadOrderDTO> GetOrderByOrderNumberAsync(string orderId);
     Task<IEnumerable<ReadOrderDTO>> GetAllOrdersAsync();
     Task<IEnumerable<ReadOrderDTO>> GetOrdersByUserIdAsync(string userId);
     Task<IEnumerable<ReadOrderDTO>> GetActiveOrdersByUserIdAsync();

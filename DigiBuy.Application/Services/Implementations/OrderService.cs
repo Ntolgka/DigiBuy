@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using AutoMapper;
 using DigiBuy.Application.Dtos.OrderDTOs;
+using DigiBuy.Application.Helpers;
 using DigiBuy.Application.Services.Interfaces;
 using DigiBuy.Domain.Entities;
 using DigiBuy.Domain.Repositories;
@@ -33,6 +34,7 @@ public class OrderService : IOrderService
         
         var order = mapper.Map<Order>(orderDto);
         order.UserId = userId;
+        order.OrderNumber = OrderNumberGenerator.GenerateOrderNumber();
         order.IsActive = true;
         order.InsertDate = DateTime.UtcNow;
         
@@ -77,6 +79,17 @@ public class OrderService : IOrderService
     public async Task<ReadOrderDTO> GetOrderByIdAsync(Guid id)
     {
         var order = await unitOfWork.GetRepository<Order>().GetByIdAsync(id, nameof(Order.OrderDetails));
+        if (order == null)
+        {
+            throw new KeyNotFoundException("Order not found.");
+        }
+
+        return mapper.Map<ReadOrderDTO>(order);
+    }
+    
+    public async Task<ReadOrderDTO> GetOrderByOrderNumberAsync(string orderNumber)
+    {
+        var order = await unitOfWork.GetRepository<Order>().FirstOrDefaultAsync(o => o.OrderNumber == orderNumber, nameof(Order.OrderDetails));
         if (order == null)
         {
             throw new KeyNotFoundException("Order not found.");

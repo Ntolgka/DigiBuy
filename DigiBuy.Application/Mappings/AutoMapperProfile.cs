@@ -38,7 +38,8 @@ public class AutoMapperProfile : Profile
                 .ReverseMap(); 
 
             CreateMap<CreateOrderDTO, Order>()
-                .ForMember(dest => dest.OrderDetails, opt => opt.Ignore());
+                .ForMember(dest => dest.OrderDetails, opt => opt.Ignore())
+                .ForMember(dest => dest.OrderNumber, opt => opt.Ignore());
 
             // OrderDetail
             CreateMap<OrderDetail, ReadOrderDetailDTO>().ReverseMap();
