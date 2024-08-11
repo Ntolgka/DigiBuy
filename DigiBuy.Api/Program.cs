@@ -203,7 +203,7 @@ using (var scope = app.Services.CreateScope())
     RecurringJob.AddOrUpdate(
         "process-email-jobs",
         () => emailService.ProcessEmailJobs(),
-        "*/5 * * * *"); // Adjust the schedule as needed
+        "*/5 * * * *"); // Every 5th minute
 }
 
 Log.Information("Starting up");
