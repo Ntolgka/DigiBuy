@@ -17,7 +17,7 @@ public class ProductController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateProduct([FromBody] CreateProductDTO productDto)
     {
         if (!ModelState.IsValid)

@@ -38,7 +38,7 @@ public class CheckoutService : ICheckoutService
         var coupon = await ValidateCouponAsync(couponCode);
 
         // Calculate order amount, points to use, and new points earned
-        var (totalAmount, discountAmount, pointsToUse, newPointsEarned) = await CalculateOrderAmount(order, user, coupon, usePoints);
+        var (totalAmount, discountAmount, pointsToUse, newPointsEarned, pointsUsed) = await CalculateOrderAmount(order, user, coupon, usePoints);
         
         var (amountToChargeByCard, amountToDeductFromWallet) = DeterminePaymentAmounts(user, totalAmount);
         
@@ -47,14 +47,14 @@ public class CheckoutService : ICheckoutService
             ValidateCardAndCharge(amountToChargeByCard, cardDetails, user.Email);
         }
 
-        await FinalizeOrderAsync(user, pointsToUse, order, coupon, totalAmount, amountToDeductFromWallet, newPointsEarned);
+        await FinalizeOrderAsync(user, pointsUsed, order, coupon, totalAmount, amountToDeductFromWallet, newPointsEarned);
 
         return new CheckoutResultDTO
         {
             TotalAmount = order.TotalAmount,
             DiscountAmount = discountAmount,
             CouponCode = coupon.Code,
-            PointsUsed = pointsToUse,
+            PointsUsed = pointsUsed,
             PointsEarned = newPointsEarned,
             AmountChargedToCard = amountToChargeByCard,
             AmountDeductedFromWallet = amountToDeductFromWallet
@@ -101,7 +101,7 @@ public class CheckoutService : ICheckoutService
         return coupon;
     }
 
-    private async Task<(decimal totalAmount, decimal discountAmount, decimal pointsToUse, decimal newPointsEarned)> CalculateOrderAmount(Order order, User user, Coupon coupon, bool usePoints)
+    private async Task<(decimal totalAmount, decimal discountAmount, decimal pointsToUse, decimal newPointsEarned, decimal pointsUsed)> CalculateOrderAmount(Order order, User user, Coupon coupon, bool usePoints)
     {
         decimal totalAmount = order.TotalAmount;
         decimal discountAmount = coupon?.Amount ?? 0;
@@ -114,10 +114,12 @@ public class CheckoutService : ICheckoutService
             totalAmount -= pointsToUse;
         }
 
+        decimal pointsUsed = pointsToUse;
+
         decimal newPointsEarned = 0;
         
         if (totalAmount == 0)
-            return (totalAmount, discountAmount, pointsToUse, newPointsEarned);
+            return (totalAmount, discountAmount, pointsToUse, newPointsEarned, pointsUsed);
         
         foreach (var detail in order.OrderDetails)
         {
@@ -135,7 +137,7 @@ public class CheckoutService : ICheckoutService
                 newPointsEarned += rewardPoints;
             }
         }
-        return (totalAmount, discountAmount, pointsToUse, newPointsEarned);
+        return (totalAmount, discountAmount, pointsToUse, newPointsEarned, pointsUsed);
     }
 
     private (decimal amountToChargeByCard, decimal amountToDeductFromWallet) DeterminePaymentAmounts(User user, decimal totalAmount)
@@ -160,10 +162,10 @@ public class CheckoutService : ICheckoutService
         emailService.EnqueueEmail(userEmail, subject, message);
     }
 
-    private async Task FinalizeOrderAsync(User user, decimal pointsToUse, Order order, Coupon coupon, decimal totalAmount, decimal amountDeductedFromWallet, decimal newPointsEarned)
+    private async Task FinalizeOrderAsync(User user, decimal pointsUsed, Order order, Coupon coupon, decimal totalAmount, decimal amountDeductedFromWallet, decimal newPointsEarned)
     {
         // Deduct points and update user balances
-        user.PointsBalance -= pointsToUse;
+        user.PointsBalance -= pointsUsed;
         user.WalletBalance -= amountDeductedFromWallet;
         user.PointsBalance += newPointsEarned;
         
@@ -174,7 +176,7 @@ public class CheckoutService : ICheckoutService
         }
         
         order.CouponAmount = coupon?.Amount ?? 0;
-        order.PointsUsed = pointsToUse;
+        order.PointsUsed = pointsUsed;
         order.UpdateDate = DateTime.UtcNow;
         order.IsActive = false;
         order.CouponCode = coupon?.Code ?? string.Empty;

@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using AutoMapper;
-using DigiBuy.Application.Dtos.CategoryDTOs;
 using DigiBuy.Application.Dtos.ProductCategoryDTOs;
 using DigiBuy.Application.Dtos.ProductDTOs;
 using DigiBuy.Application.Services.Interfaces;
